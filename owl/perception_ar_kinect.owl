@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE rdf:RDF [
+    <!ENTITY local_path 'file:///home/student/a/ahaeuser/ros-hydro/dry/stacks/knowrob/ias_knowledge_base/owl/'>
+    <!ENTITY owl "http://www.w3.org/2002/07/owl#" >
+    <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >
+    <!ENTITY owl2xml "http://www.w3.org/2006/12/owl2-xml#" >
+    <!ENTITY knowrob "http://ias.cs.tum.edu/kb/knowrob.owl#" >
+    <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#" >
+    <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+    <!ENTITY knowrob_perception_tutorial "http://ias.cs.tum.edu/kb/knowrob_perception_tutorial.owl#" >
+]>
+
+
+<rdf:RDF xmlns="http://ias.cs.tum.edu/kb/knowrob_perception_tutorial.owl#"
+      xml:base="http://ias.cs.tum.edu/kb/knowrob_perception_tutorial.owl"
+      xmlns:computable="http://ias.cs.tum.edu/kb/computable.owl#"
+      xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+      xmlns:owl2xml="http://www.w3.org/2006/12/owl2-xml#"
+      xmlns:owl="http://www.w3.org/2002/07/owl#"
+      xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+      xmlns:knowrob="http://ias.cs.tum.edu/kb/knowrob.owl#"
+      xmlns:knowrob_perception_tutorial="http://ias.cs.tum.edu/kb/knowrob_perception_tutorial.owl#">
+
+    <owl:Ontology rdf:about="http://perception_ar_kinect.owl">
+        <owl:imports rdf:resource="&local_path;knowrob.owl"/>
+        <owl:imports rdf:resource="file:///home/student/a/ahaeuser/ros-hydro/dry/stacks/knowrob_own/infer_hidden_params/owl/hidden_params.owl"/>
+    </owl:Ontology>
+
+
+    <!-- Definition of the DummyObjectDetection class that describes the 
+         type of perceptions associated with the created object instances -->
+
+    <owl:Class rdf:about="&knowrob;ARKinectObjectDetection">
+        <rdfs:subClassOf rdf:resource="&knowrob;VisualPerception"/>
+    </owl:Class>
+
+
+
+    <!-- Definition of a computable for the HumanScaleObject class that
+         creates object instances based on (dummy) perception results -->
+
+    <computable:PrologClass rdf:about="#computeObjectDetections">
+        <computable:command rdf:datatype="&xsd;string">comp_object_detection</computable:command>
+        <computable:cache rdf:datatype="&xsd;string">cache</computable:cache>
+        <computable:visible rdf:datatype="&xsd;string">unvisible</computable:visible>
+        <computable:target rdf:resource="&knowrob;HumanScaleObject"/>
+    </computable:PrologClass>  
+
+</rdf:RDF>

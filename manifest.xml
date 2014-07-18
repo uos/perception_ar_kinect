@@ -1,0 +1,18 @@
+<package>
+  <description brief="perception_ar_kinect">
+
+     perception_ar_kinect
+
+  </description>
+  <author>ahaeuser</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/perception_ar_kinect</url>
+
+  <depend package="knowrob_objects"/>
+  <depend package="json_prolog"/>
+  <depend package="ar_kinect"/>
+
+</package>
+
+
