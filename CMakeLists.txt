@@ -32,5 +32,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 rosbuild_add_executable(ar_marker_listener src/ar_marker_listener.cpp)
 target_link_libraries(ar_marker_listener json_prolog)
+rosbuild_add_executable(ar_action_listener src/ar_action_listener.cpp)
+target_link_libraries(ar_action_listener json_prolog)
 rosbuild_add_executable(mytest src/mytest.cpp)
 target_link_libraries(mytest json_prolog)

@@ -1,7 +1,8 @@
 
 :- module(knowrob_perception_ext,
     [
-      create_object_perception_with_instance_check/4
+      create_object_perception_with_instance_check/4,
+      create_action_inst_perception/7
     ]).
 
 :- use_module(library('semweb/rdfs')).
@@ -19,6 +20,41 @@
 
 :- rdf_meta
    create_object_perception_with_instance_check(r, +, +, -).
+   create_action_inst_perception(r, +, +, +, +, +, -).
+
+
+
+%% create_action_inst_perception
+%
+% creates an ActionInst with the given ObjActOns, To- and FromLocations
+%
+% @param Action       Type of Action to be created
+% @param ObjActOnSet  List of Objects/ObjectInstances to be objectsActedOn
+% @param ToLocSet     List of Locations/LocationInstances to be toLocations
+% @param FromLocSet   List of Locations/LocationInstances to be fromLocations
+% @param StartTime    Time the action started
+% @param EndTime      Time the action ended
+% @param ActionInst   created ActionInstance 
+
+create_action_inst_perception(Action, ObjActOnSet, ToLocSet, FromLocSet, StartTime, EndTime, ActionInst) :-
+  rdf_instance_from_class(Action, ActionInst),
+  forall(member(ObjType, ObjActOnSet),
+    ((owl_individual_of(ObjType, owl:'Class') ->
+      rdf_instance_from_class(ObjType, ObjActOn);
+      (ObjActOn = ObjType)),
+    rdf_assert(ActionInst, knowrob:'objectActedOn', ObjActOn))),
+  forall(member(ToLocType, ToLocSet),
+    ((owl_individual_of(ToLocType, owl:'Class') ->
+      rdf_instance_from_class(ToLocType, ToLoc);
+      (ToLoc = ToLocType)),
+    rdf_assert(ActionInst, knowrob:'toLocation', ToLoc))),
+  forall(member(FromLocType, FromLocSet),
+    ((owl_individual_of(FromLocType, owl:'Class') ->
+      rdf_instance_from_class(FromLocType, FromLoc);
+      (FromLoc = FromLocType)),
+    rdf_assert(ActionInst, knowrob:'fromLocation', FromLoc))),
+  rdf_assert(ActionInst, knowrob:'startTime', StartTime),
+  rdf_assert(ActionInst, knowrob:'endTime', EndTime).
 
 
 
@@ -69,7 +105,7 @@ same_object(ObjClass, ObjPose, ObjInst) :-
   rdf_triple(knowrob:m23, Loc, LCzz),strip_literal_type(LCzz, LCz),atom_to_term(LCz,LZ,_),
 
   % check if distance is below 5cm
-  =<( (((DX-LX)*(DX-LX))+((DY-LY)*(DY-LY))+((DZ-LZ)*(DZ-LZ))), 0.5).
+  =<( (((DX-LX)*(DX-LX))+((DY-LY)*(DY-LY))+((DZ-LZ)*(DZ-LZ))), 0.25).
 
 
 
