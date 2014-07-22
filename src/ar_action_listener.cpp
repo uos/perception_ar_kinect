@@ -53,6 +53,17 @@ private:
       case 3: return "DrinkingGlass";
       default: return "HumanScaleObject";}
   }
+  
+  void normalizePoseStamped(geometry_msgs::PoseStamped& pose)
+  {
+    tf::Quaternion n = tf::Quaternion(pose.pose.orientation.x, pose.pose.orientation.y,
+      pose.pose.orientation.z, pose.pose.orientation.w);
+    tf::Quaternion nn = n.normalized();
+    pose.pose.orientation.x = nn.x();
+    pose.pose.orientation.y = nn.y();
+    pose.pose.orientation.z = nn.z();
+    pose.pose.orientation.w = nn.w();
+  }
 
   string findObjInst(string& type, geometry_msgs::PoseStamped& pose)
   {
@@ -98,11 +109,10 @@ private:
         geometry_msgs::PoseStamped outPose;
         inPose.pose = obj.pose.pose;
         inPose.header = obj.header;
+        normalizePoseStamped(inPose);
         try {
           tflistener_.waitForTransform(targetFrame, inPose.header.frame_id, ros::Time(0), ros::Duration(10.0));
           tflistener_.transformPose(targetFrame, inPose, outPose); 
-          // check for rotation
-
           tf::Quaternion q = tf::Quaternion(outPose.pose.orientation.x, outPose.pose.orientation.y,
             outPose.pose.orientation.z, outPose.pose.orientation.w);
           tf::Pose p;

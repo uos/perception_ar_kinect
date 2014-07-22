@@ -42,6 +42,16 @@ private:
       default: return "HumanScaleObject";}
   }
   
+  void normalizePoseStamped(geometry_msgs::PoseStamped& pose)
+  {
+    tf::Quaternion n = tf::Quaternion(pose.pose.orientation.x, pose.pose.orientation.y,
+      pose.pose.orientation.z, pose.pose.orientation.w);
+    tf::Quaternion nn = n.normalized();
+    pose.pose.orientation.x = nn.x();
+    pose.pose.orientation.y = nn.y();
+    pose.pose.orientation.z = nn.z();
+    pose.pose.orientation.w = nn.w();
+  }
   
   void arCallback(const ar_pose::ARMarkers& markers)
   {
@@ -56,6 +66,7 @@ private:
       geometry_msgs::PoseStamped outPose;
       inPose.pose = obj.pose.pose;
       inPose.header = obj.header;
+      normalizePoseStamped(inPose);
       try {
         tflistener_.waitForTransform(targetFrame, inPose.header.frame_id, ros::Time(0), ros::Duration(10.0));
         tflistener_.transformPose(targetFrame, inPose, outPose); 
@@ -76,7 +87,6 @@ private:
           << static_cast<double>(p.getBasis().getRow(2).getZ()) << ","
           << outPose.pose.position.z << ", 0.0, 0.0, 0.0, 1.0], ['ARKinectObjectDetection'], ObjInst)";
         pl.query(s.str());
-        cout << s.str() << endl;
       } catch (tf::TransformException ex) {
           ROS_ERROR("%s", ex.what());
       }
