@@ -2,7 +2,8 @@
 :- module(knowrob_perception_ext,
     [
       create_object_perception_with_instance_check/4,
-      create_action_inst_perception/7
+      create_action_inst_perception/7,
+      same_object/3
     ]).
 
 :- use_module(library('semweb/rdfs')).
@@ -53,8 +54,10 @@ create_action_inst_perception(Action, ObjActOnSet, ToLocSet, FromLocSet, StartTi
       rdf_instance_from_class(FromLocType, FromLoc);
       (FromLoc = FromLocType)),
     rdf_assert(ActionInst, knowrob:'fromLocation', FromLoc))),
-  rdf_assert(ActionInst, knowrob:'startTime', StartTime),
-  rdf_assert(ActionInst, knowrob:'endTime', EndTime).
+  % for now
+  get_timepoint(Start), get_timepoint(End), 
+  rdf_assert(ActionInst, knowrob:'startTime', Start),
+  rdf_assert(ActionInst, knowrob:'endTime', End).
 
 
 

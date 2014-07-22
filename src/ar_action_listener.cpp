@@ -53,7 +53,27 @@ private:
       case 3: return "DrinkingGlass";
       default: return "HumanScaleObject";}
   }
-  
+
+  string findObjInst(string& type, geometry_msgs::PoseStamped& pose)
+  {
+    tf::Quaternion q = tf::Quaternion(pose.pose.orientation.x, pose.pose.orientation.y,
+      pose.pose.orientation.z, pose.pose.orientation.w);
+    tf::Pose p;
+    p.getBasis().setRotation(q);
+
+    Prolog prolog;
+    stringstream a;
+    a << "same_object('http://ias.cs.tum.edu/kb/knowrob.owl#" << type << "', [" 
+      <<static_cast<double>(p.getBasis().getRow(0).getX())<<","<< static_cast<double>(p.getBasis().getRow(0).getY())<<","
+      <<static_cast<double>(p.getBasis().getRow(0).getZ())<<","<< pose.pose.position.x<<","
+      <<static_cast<double>(p.getBasis().getRow(1).getX())<<","<< static_cast<double>(p.getBasis().getRow(1).getY())<<","
+      <<static_cast<double>(p.getBasis().getRow(1).getZ())<<","<< pose.pose.position.y<<","
+      <<static_cast<double>(p.getBasis().getRow(2).getX())<<","<< static_cast<double>(p.getBasis().getRow(2).getY())<<","
+      <<static_cast<double>(p.getBasis().getRow(2).getZ())<<","
+      <<pose.pose.position.z << ", 0.0, 0.0, 0.0, 1.0], ObjInst)";
+    PrologBindings r = prolog.once(a.str());
+    return r["ObjInst"];
+  }
   
   void arCallback(const ar_pose::ARMarkers& markers)
   {
@@ -113,7 +133,7 @@ private:
             }
           }
           else {
-            if(obj.id == static_cast<int>(objActOn.id)) {
+            if(obj.id == static_cast<unsigned int>(objActOn.id)) {
               // ids match but no longer above
               if ((toLoc.pose.pose.position.z > outPose.pose.position.z) || 
                   (toLoc.pose.pose.position.z + 0.2 < outPose.pose.position.z)) {
@@ -124,20 +144,14 @@ private:
                 if (d.toSec() > 3.0) {
                   //TODO create FIllingActionInst
                   cout << "found filling Process" << endl;
+                  string toLocInst = findObjInst(toLoc.type, toLoc.pose); 
+                  string objActOnInst = findObjInst(objActOn.type, objActOn.pose);
                   stringstream a;
-                  a << " "; 
-/*      // add object perception to knowrob
-        s << "create_object_perception_with_instance_check('http://ias.cs.tum.edu/kb/knowrob.owl#" << type <<"', ["
-          << static_cast<double>(p.getBasis().getRow(0).getX()) << "," << static_cast<double>(p.getBasis().getRow(0).getY()) << ","
-          << static_cast<double>(p.getBasis().getRow(0).getZ()) << "," << outPose.pose.position.x << ","
-          << static_cast<double>(p.getBasis().getRow(1).getX()) << "," << static_cast<double>(p.getBasis().getRow(1).getY()) << ","
-          << static_cast<double>(p.getBasis().getRow(1).getZ()) << "," << outPose.pose.position.y << ","
-          << static_cast<double>(p.getBasis().getRow(2).getX()) << "," << static_cast<double>(p.getBasis().getRow(2).getY()) << ","
-          << static_cast<double>(p.getBasis().getRow(2).getZ()) << ","
-          << outPose.pose.position.z << ", 0.0, 0.0, 0.0, 1.0], ['ARKinectObjectDetection'], ObjInst)";
-        pl.query(s.str());
-        cout << s.str() << endl;
-*/
+                  a << "create_action_inst_perception('http://ias.cs.tum.edu/kb/knowrob.owl#FillingProcess',['"
+                    << objActOnInst << "'],['" << toLocInst << "'], []," << startTime.toSec() << ","
+                    << endTime.toSec() << ", ActionInst)";
+                  pl.query(a.str());
+                  cout << a.str() << endl;
                 }
               }
             }
