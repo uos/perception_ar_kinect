@@ -122,7 +122,7 @@ private:
           //start time set?
           if (!hasStartTime){
             // has harizontal orientation, potential objActOn 
-            if ((-1.5 < pitch) && (pitch < -0.8)){
+            if ((-2.0 < pitch) && (pitch < -1.0)){
               // toLoc set?
               if (!toLoc.type.empty()) {
                 // pose above toLoc?
@@ -144,16 +144,15 @@ private:
           }
           else {
             if(obj.id == static_cast<unsigned int>(objActOn.id)) {
-              // ids match but no longer above
-              if ((toLoc.pose.pose.position.z > outPose.pose.position.z) || 
-                  (toLoc.pose.pose.position.z + 0.2 < outPose.pose.position.z)) {
+              // ids match but no longer horizontally oriented 
+              if ((-2.0 > pitch) || (pitch > -1.0)){
                 ros::Time endTime = ros::Time::now();
                 ros::Duration d = endTime - startTime; 
                 hasStartTime = false;
                 // filling action took place if actOnObject was in vertical position for >3sec?
-                if (d.toSec() > 3.0) {
+                if (d.toSec() > 5.0) {
                   //TODO create FIllingActionInst
-                  cout << "found filling Process" << endl;
+                  cout << "detected filling Process" << endl;
                   string toLocInst = findObjInst(toLoc.type, toLoc.pose); 
                   string objActOnInst = findObjInst(objActOn.type, objActOn.pose);
                   stringstream a;
