@@ -12,6 +12,14 @@
   <depend package="knowrob_objects"/>
   <depend package="json_prolog"/>
   <depend package="ar_kinect"/>
+  <depend package="actionlib"/>
+  <depend package="actionlib_msgs"/>
+
+  <depend package="image_geometry"/>
+  <depend package="image_transport"/>
+  <depend package="opencv2"/>
+  <depend package="cv_bridge"/>
+  <depend package="image_view"/>
 
 </package>
 

@@ -1,5 +1,8 @@
 build
 bin
+msg_gen
+srv_gen
+msg/GetDrinkColor*.msg
 
 *.swp
 *.xml

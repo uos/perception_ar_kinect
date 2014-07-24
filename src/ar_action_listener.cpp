@@ -30,7 +30,7 @@ public:
   ARFillingActionListener()
   {
     hasStartTime = false;
-    ros::Subscriber sub = n_.subscribe("/ar_pose_markers", 100, &ARFillingActionListener::arCallback, this);
+    ros::Subscriber sub_ = n_.subscribe("/ar_pose_markers", 100, &ARFillingActionListener::arCallback, this);
     ros::spin();
   }
 
