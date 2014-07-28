@@ -25,7 +25,7 @@
 
     <owl:Ontology rdf:about="http://perception_ar_kinect.owl">
         <owl:imports rdf:resource="&local_path;knowrob.owl"/>
-        <owl:imports rdf:resource="file:///home/student/a/ahaeuser/ros-hydro/dry/stacks/knowrob_own/infer_hidden_params/owl/hidden_params.owl"/>
+        <owl:imports rdf:resource="file:///home/student/a/ahaeuser/ros-hydro/dry/stacks/infer_hidden_params/owl/hidden_params.owl"/>
     </owl:Ontology>
 
 
