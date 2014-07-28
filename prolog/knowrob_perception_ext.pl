@@ -3,7 +3,8 @@
     [
       create_object_perception_with_instance_check/4,
       create_action_inst_perception/7,
-      same_object/3
+      same_object/3,
+      get_pose/2
     ]).
 
 :- use_module(library('semweb/rdfs')).
@@ -122,3 +123,31 @@ create_instance_perception(ObjInst, ObjPose, PerceptionTypes) :-
    set_object_perception(ObjInst, Perception),
    set_perception_pose(Perception, ObjPose).
 
+
+%% get_pose
+%
+% extracts pose parameters from given Rotation Matrix
+
+get_pose(RotM, [M00, M01, M02, M03, M10, M11, M12, M13, M20, M21, M22, M23, M30, M31, M32, M33]) :-
+
+  owl_individual_of(RotM, knowrob:'RotationMatrix3D'),
+
+  rdf_triple(knowrob:m00, RotM, RCC00),strip_literal_type(RCC00, RC00),atom_to_term(RC00,M00,_),
+  rdf_triple(knowrob:m01, RotM, RCC01),strip_literal_type(RCC01, RC01),atom_to_term(RC01,M01,_),
+  rdf_triple(knowrob:m02, RotM, RCC02),strip_literal_type(RCC02, RC02),atom_to_term(RC02,M02,_),
+  rdf_triple(knowrob:m03, RotM, RCC03),strip_literal_type(RCC03, RC03),atom_to_term(RC03,M03,_),
+
+  rdf_triple(knowrob:m10, RotM, RCC10),strip_literal_type(RCC10, RC10),atom_to_term(RC10,M10,_),
+  rdf_triple(knowrob:m11, RotM, RCC11),strip_literal_type(RCC11, RC11),atom_to_term(RC11,M11,_),
+  rdf_triple(knowrob:m12, RotM, RCC12),strip_literal_type(RCC12, RC12),atom_to_term(RC12,M12,_),
+  rdf_triple(knowrob:m13, RotM, RCC13),strip_literal_type(RCC13, RC13),atom_to_term(RC13,M13,_),
+
+  rdf_triple(knowrob:m20, RotM, RCC20),strip_literal_type(RCC20, RC20),atom_to_term(RC20,M20,_),
+  rdf_triple(knowrob:m21, RotM, RCC21),strip_literal_type(RCC21, RC21),atom_to_term(RC21,M21,_),
+  rdf_triple(knowrob:m22, RotM, RCC22),strip_literal_type(RCC22, RC22),atom_to_term(RC22,M22,_),
+  rdf_triple(knowrob:m23, RotM, RCC23),strip_literal_type(RCC23, RC23),atom_to_term(RC23,M23,_),
+
+  rdf_triple(knowrob:m30, RotM, RCC30),strip_literal_type(RCC30, RC30),atom_to_term(RC30,M30,_),
+  rdf_triple(knowrob:m31, RotM, RCC31),strip_literal_type(RCC31, RC31),atom_to_term(RC31,M31,_),
+  rdf_triple(knowrob:m32, RotM, RCC32),strip_literal_type(RCC32, RC32),atom_to_term(RC32,M32,_),
+  rdf_triple(knowrob:m33, RotM, RCC33),strip_literal_type(RCC33, RC33),atom_to_term(RC33,M33,_).
