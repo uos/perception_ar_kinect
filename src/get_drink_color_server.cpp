@@ -1,12 +1,3 @@
-//position: 
-//  x: 0.1710485816
-//  y: -0.0524723976851
-//  z: 1.10899984837
-//orientation: 
-//  x: -0.019898388402
-//  y: 0.875484219523
-//  z: -0.482836884615
-//  w: -0.0118588530901
 
 #include <string>
 
@@ -26,6 +17,11 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+
+using namespace cv;
 
 class GetDrinkColorAction 
 {
@@ -34,14 +30,14 @@ private:
   actionlib::SimpleActionServer<perception_ar_kinect::GetDrinkColorAction> as_;
   std::string action_name_;
   perception_ar_kinect::GetDrinkColorResult result_;  
-  geometry_msgs::PoseStamped goal_;
+  perception_ar_kinect::GetDrinkColorGoalConstPtr goal_;
+  geometry_msgs::PoseStamped pose_;
 
   image_transport::ImageTransport it_;
   image_transport::CameraSubscriber sub_;
   image_transport::Publisher pub_;
   tf::TransformListener tflistener_;
   image_geometry::PinholeCameraModel cam_model_;
-  bool executing_;
 
 public:
   GetDrinkColorAction(std::string name) :
@@ -56,68 +52,91 @@ public:
   }
 
 
- //callback for starting a new GetDrinkColorAction
- void goalCB()
- {
-   std::cout << "here" << std::endl;
-   goal_ = as_.acceptNewGoal()->pose;
-   std::cout << "got activated" << std::endl;
- }
+  //callback for starting a new GetDrinkColorAction
+  void goalCB()
+  {
+    goal_ = as_.acceptNewGoal();
+    pose_ = goal_->pose;
+  }
 
 
- void analyseCB(const sensor_msgs::ImageConstPtr& image_msg,
-                const sensor_msgs::CameraInfoConstPtr& info_msg)
- {
-   if(!as_.isActive()){
-     return;
-   }
-   std::cout << "is active" << std::endl;
-
-   cv::Mat image;
-   cv_bridge::CvImagePtr input_bridge;
-   //convert Image message to an OpenCV IplImage
-   try {
-     input_bridge = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::BGR8);
-     image = input_bridge->image;
-   }
-   catch (cv_bridge::Exception& ex) {
-     ROS_ERROR("[get_drink_color] Fialed to convert image");
-     as_.setAborted();
-   }
-
-   cam_model_.fromCameraInfo(info_msg);
-   std::string frame_id = goal_.header.frame_id;
-   std::cout << "goal: " << goal_.header.frame_id << std::endl;
-   std::cout << "cameraFrame: " << cam_model_.tfFrame() << std::endl;
-   geometry_msgs::PointStamped pointOut;
-   geometry_msgs::PointStamped pointIn;
-   pointIn.header = goal_.header;
-   pointIn.point = goal_.pose.position;
-   // transform goal position to the optical frame of the camera
-   try {
-     ros::Time acquisition_time = info_msg->header.stamp;
-     ros::Duration timeout(1.0 / 5);
-     tflistener_.waitForTransform(cam_model_.tfFrame(), frame_id, acquisition_time, timeout);
-     tflistener_.transformPoint(cam_model_.tfFrame(), pointIn, pointOut);
-   }
-   catch (tf::TransformException& ex) {
-     ROS_WARN("[get_drink_color] TF exception:\n%s", ex.what());
-     as_.setAborted();
-   }
-
-   cv::Point3d pt_cv(pointOut.point.x, pointOut.point.y, pointOut.point.z);
-   cv::Point2d uv_rect = cam_model_.project3dToPixel(pt_cv);
-   cv::Point2d uv = cam_model_.unrectifyPoint(uv_rect);
-
-   //draw into image for debugging
-   static const int RADIUS = 3;
-   cv::circle(image, uv, RADIUS, CV_RGB(255, 0, 0), -1);
-   pub_.publish(input_bridge->toImageMsg());
-
-   result_.color = "unknown";
-   as_.setSucceeded(result_);
- }
-
+  void analyseCB(const sensor_msgs::ImageConstPtr& image_msg,
+                 const sensor_msgs::CameraInfoConstPtr& info_msg)
+  {
+    if(!as_.isActive()){
+      return;
+    }
+ 
+    //convert Image message to an OpenCV IplImage
+    cv::Mat image;
+    cv_bridge::CvImagePtr input_bridge;
+    try {
+      input_bridge = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::BGR8);
+      image = input_bridge->image;
+    }
+    catch (cv_bridge::Exception& ex) {
+      ROS_ERROR("[get_drink_color] Fialed to convert image");
+      as_.setAborted();
+    }
+ 
+    //transform goal position to the optical frame of the camera
+    cam_model_.fromCameraInfo(info_msg);
+    std::string frame_id = pose_.header.frame_id;
+    geometry_msgs::PointStamped pointOut;
+    geometry_msgs::PointStamped pointIn;
+    pointIn.header = pose_.header;
+    pointIn.point = pose_.pose.position;
+    try {
+      ros::Time acquisition_time = info_msg->header.stamp;
+      ros::Duration timeout(1.0 / 5);
+      tflistener_.waitForTransform(cam_model_.tfFrame(), frame_id, acquisition_time, timeout);
+      tflistener_.transformPoint(cam_model_.tfFrame(), pointIn, pointOut);
+    }
+    catch (tf::TransformException& ex) {
+      ROS_WARN("[get_drink_color] TF exception:\n%s", ex.what());
+      as_.setAborted();
+    }
+ 
+    //slice the image around given Position
+    double h = goal_->bb_height/2;
+    double w = goal_->bb_height/2;
+    cv::Point3d pt_topleft(pointOut.point.x-w, pointOut.point.y-h, pointOut.point.z);
+    cv::Point3d pt_bottomright(pointOut.point.x+w, pointOut.point.y+h, pointOut.point.z);
+    cv::Point2d uv_tl_rect = cam_model_.project3dToPixel(pt_topleft);
+    cv::Point2d uv_br_rect = cam_model_.project3dToPixel(pt_bottomright);
+    cv::Point2d uv_tl = cam_model_.unrectifyPoint(uv_tl_rect);
+    cv::Point2d uv_br = cam_model_.unrectifyPoint(uv_br_rect);
+    cv::Mat slice = image(cv::Rect(uv_tl,uv_br)).clone();
+    //output image for debugging
+    input_bridge->image = slice;
+    pub_.publish(input_bridge->toImageMsg());
+ 
+    //convert image to HSV
+    cv::Mat hsv_image;
+    cv::cvtColor(slice, hsv_image, CV_BGR2HSV);
+ 
+    //filter for red
+    cv::Mat mask;
+    cv::inRange(hsv_image, Scalar(0,170,60), Scalar(15,255,170), mask); 
+    //count pixels
+    int count = 0;
+    for(int i = 0; i < mask.rows; i++) {
+      for(int j = 0; j < mask.cols; j++) {
+        if (mask.at<int>(i,j) > 0)
+          count++;
+      }
+    }
+    std::cout << "Count: " << count << std::endl;
+    if (count > 170)
+    {
+      result_.color = "RedColor";
+      as_.setSucceeded(result_);
+    }
+    else {
+      result_.color = "none";
+      as_.setSucceeded(result_);
+    }
+  }
 };
 
 

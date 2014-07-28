@@ -24,8 +24,8 @@ int main (int argc, char **argv)
   geometry_msgs::PoseStamped ps;
   ps.header.frame_id = "/kinect_rgb_optical_frame";
   ps.header.stamp = ros::Time::now();
-  ps.pose.position.x = 0.1710485816;
-  ps.pose.position.y = -0.0524723976851;
+  ps.pose.position.x = 0.1810485816;
+  ps.pose.position.y = -0.0224723976851;
   ps.pose.position.z = 1.10899984837;
   ps.pose.orientation.x = -0.019898388402;
   ps.pose.orientation.y = 0.875484219523;
@@ -33,6 +33,7 @@ int main (int argc, char **argv)
   ps.pose.orientation.w = -0.0118588530901;
 
   goal.pose = ps;
+  goal.bb_height = goal.bb_width = 0.1;
   ac.sendGoal(goal);
 
   ROS_INFO("Action server started, sending goal.");

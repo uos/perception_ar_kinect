@@ -1,5 +1,7 @@
 # goal
 geometry_msgs/PoseStamped pose
+float64 bb_height
+float64 bb_width
 ---
 # result
 string color
