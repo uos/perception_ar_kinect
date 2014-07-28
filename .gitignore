@@ -3,6 +3,9 @@ bin
 msg_gen
 srv_gen
 msg/GetDrinkColor*.msg
+src/perception_ar_kinect
+
+data/*.jpg
 
 *.swp
 *.xml

@@ -46,3 +46,5 @@ rosbuild_add_executable(get_drink_color_server src/get_drink_color_server.cpp)
 rosbuild_link_boost(get_drink_color_server thread)
 rosbuild_add_executable(get_drink_color_client src/get_drink_color_client.cpp)
 rosbuild_link_boost(get_drink_color_client thread)
+
+rosbuild_add_executable(color_trackbar src/color_trackbar.cpp)
