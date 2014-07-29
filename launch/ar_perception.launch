@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+
+  <node name="ar_object_listener" pkg="perception_ar_kinect" type="ar_object_listener" output="screen"/>
+  <node name="ar_action_listener" pkg="perception_ar_kinect" type="ar_action_listener" output="screen"/>
+
+</launch>
