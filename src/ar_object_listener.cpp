@@ -96,7 +96,7 @@ private:
 
 int main(int argc, char *argv[])
 {
-  ros::init(argc, argv, "ar_marker_listener");
+  ros::init(argc, argv, "ar_object_listener");
 
   ARListener arlistener;
 
