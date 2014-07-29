@@ -100,8 +100,8 @@ public:
     //slice the image around given Position
     double h = goal_->bb_height/2;
     double w = goal_->bb_height/2;
-    cv::Point3d pt_topleft(pointOut.point.x-w, pointOut.point.y-h, pointOut.point.z);
-    cv::Point3d pt_bottomright(pointOut.point.x+w, pointOut.point.y+h, pointOut.point.z);
+    cv::Point3d pt_topleft(pointOut.point.x-w, pointOut.point.y-0.5*h, pointOut.point.z);
+    cv::Point3d pt_bottomright(pointOut.point.x+w, pointOut.point.y+1.5*h, pointOut.point.z);
     cv::Point2d uv_tl_rect = cam_model_.project3dToPixel(pt_topleft);
     cv::Point2d uv_br_rect = cam_model_.project3dToPixel(pt_bottomright);
     cv::Point2d uv_tl = cam_model_.unrectifyPoint(uv_tl_rect);
@@ -126,7 +126,6 @@ public:
           count++;
       }
     }
-    std::cout << "Count: " << count << std::endl;
     if (count > 170)
     {
       result_.color = "RedColor";
