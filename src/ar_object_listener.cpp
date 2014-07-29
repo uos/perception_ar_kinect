@@ -86,9 +86,13 @@ private:
           << static_cast<double>(p.getBasis().getRow(2).getX()) << "," << static_cast<double>(p.getBasis().getRow(2).getY()) << ","
           << static_cast<double>(p.getBasis().getRow(2).getZ()) << ","
           << outPose.pose.position.z << ", 0.0, 0.0, 0.0, 1.0], ['ARKinectObjectDetection'], ObjInst)";
-        pl.query(s.str());
+        try {
+          pl.query(s.str());
+        } catch(json_prolog::PrologQueryProxy::QueryError ex) {
+          ROS_ERROR("[ar_object_listener]%s", ex.what());
+        }
       } catch (tf::TransformException ex) {
-          ROS_ERROR("%s", ex.what());
+          ROS_ERROR("[ar_object_listener]%s", ex.what());
       }
     }
   } 
