@@ -5,13 +5,14 @@
 #include <ros/ros.h>
 #include <json_prolog/prolog.h>
 
-
 #include <ar_pose/ARMarkers.h>
 #include <ar_pose/ARMarker.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_datatypes.h>
+
+#include "knowrobMapping.h"
 
 
 using namespace std;
@@ -32,16 +33,6 @@ private:
   ros::NodeHandle n_;
   tf::TransformListener tflistener_;
 
-  string markerToObjClass(int id)
-  {
-    switch(id) {
-      case 0: return "TetraPak";
-      case 1: return "TetraPak";
-      case 2: return "DrinkingGlass";
-      case 3: return "DrinkingGlass";
-      default: return "HumanScaleObject";}
-  }
-  
   void normalizePoseStamped(geometry_msgs::PoseStamped& pose)
   {
     tf::Quaternion n = tf::Quaternion(pose.pose.orientation.x, pose.pose.orientation.y,
@@ -76,7 +67,7 @@ private:
         p.getBasis().setRotation(q);
         
         // add object perception to knowrob
-        string type = markerToObjClass(obj.id);
+        string type = knowrob_mapping::markerToObjClass(obj.id);
         stringstream s;
         s << "create_object_perception_with_instance_check('http://ias.cs.tum.edu/kb/knowrob.owl#" << type <<"', ["
           << static_cast<double>(p.getBasis().getRow(0).getX()) << "," << static_cast<double>(p.getBasis().getRow(0).getY()) << ","

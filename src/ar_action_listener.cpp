@@ -13,6 +13,7 @@
 #include <tf/transform_listener.h>
 #include <tf/transform_datatypes.h>
 
+#include "knowrobMapping.h"
 
 using namespace std;
 using namespace json_prolog;
@@ -44,16 +45,6 @@ private:
 
   //TODO: allow for more than a single potential toLoc
 
-  string markerToObjClass(int id)
-  {
-    switch(id) {
-      case 0: return "TetraPak";
-      case 1: return "TetraPak";
-      case 2: return "DrinkingGlass";
-      case 3: return "DrinkingGlass";
-      default: return "HumanScaleObject";}
-  }
-  
   void normalizePoseStamped(geometry_msgs::PoseStamped& pose)
   {
     tf::Quaternion n = tf::Quaternion(pose.pose.orientation.x, pose.pose.orientation.y,
@@ -98,7 +89,7 @@ private:
     //observe wether filling action takes place
     for(const ar_pose::ARMarker& obj : objects)
     {
-      string type = markerToObjClass(obj.id);
+      string type = knowrob_mapping::markerToObjClass(obj.id);
       stringstream s;
       s << "owl_subclass_of('http://ias.cs.tum.edu/kb/knowrob.owl#" << type
         << "', 'http://ias.cs.tum.edu/kb/knowrob.owl#FoodVessel')";
