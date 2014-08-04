@@ -56,30 +56,6 @@ private:
     pose.pose.orientation.w = nn.w();
   }
 
-  string findObjInst(string& type, geometry_msgs::PoseStamped& pose)
-  {
-    tf::Quaternion q = tf::Quaternion(pose.pose.orientation.x, pose.pose.orientation.y,
-      pose.pose.orientation.z, pose.pose.orientation.w);
-    tf::Pose p;
-    p.getBasis().setRotation(q);
-
-    Prolog prolog;
-    stringstream a;
-    a << "same_object('http://ias.cs.tum.edu/kb/knowrob.owl#" << type << "', [" 
-      <<static_cast<double>(p.getBasis().getRow(0).getX())<<","<< static_cast<double>(p.getBasis().getRow(0).getY())<<","
-      <<static_cast<double>(p.getBasis().getRow(0).getZ())<<","<< pose.pose.position.x<<","
-      <<static_cast<double>(p.getBasis().getRow(1).getX())<<","<< static_cast<double>(p.getBasis().getRow(1).getY())<<","
-      <<static_cast<double>(p.getBasis().getRow(1).getZ())<<","<< pose.pose.position.y<<","
-      <<static_cast<double>(p.getBasis().getRow(2).getX())<<","<< static_cast<double>(p.getBasis().getRow(2).getY())<<","
-      <<static_cast<double>(p.getBasis().getRow(2).getZ())<<","
-      <<pose.pose.position.z << ", 0.0, 0.0, 0.0, 1.0], ObjInst)";
-    try {
-      PrologBindings r = prolog.once(a.str());
-      return r["ObjInst"];
-    } catch (json_prolog::PrologQueryProxy::QueryError ex) {
-      ROS_ERROR("[ar_action_listener]%s", ex.what());
-    }
-  }
   
   void arCallback(const ar_pose::ARMarkers& markers)
   {
@@ -149,8 +125,8 @@ private:
                   if (d.toSec() > 5.0) {
                     //TODO create FIllingActionInst
                     cout << "detected filling Process" << endl;
-                    string toLocInst = findObjInst(toLoc.type, toLoc.pose); 
-                    string objActOnInst = findObjInst(objActOn.type, objActOn.pose);
+                    string toLocInst = knowrob_mapping::findObjInst(toLoc.type, toLoc.pose); 
+                    string objActOnInst = knowrob_mapping::findObjInst(objActOn.type, objActOn.pose);
                     stringstream a;
                     a << "create_action_inst_perception('http://ias.cs.tum.edu/kb/knowrob.owl#FillingProcess',['"
                       << objActOnInst << "'],['" << toLocInst << "'], []," << startTime.toSec() << ","
