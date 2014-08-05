@@ -19,7 +19,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % dependencies
 
-:- register_ros_package(ias_knowledge_base).
+:- register_ros_package(infer_hidden_params).
 :- register_ros_package(perception_ar_kinect).
 
 :- use_module(library('knowrob_perception_ext')).
