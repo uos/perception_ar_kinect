@@ -1,0 +1,8 @@
+#goal
+string container
+---
+#result
+string content
+---
+#feedback
+string feedback

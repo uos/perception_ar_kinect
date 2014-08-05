@@ -2,6 +2,7 @@
 <launch>
 
   <node name="get_drink_color" pkg="perception_ar_kinect" type="get_drink_color_server" output="screen"/>
+  <node name="query_content" pkg="perception_ar_kinect" type="query_content_server" output="screen"/>
 
 </launch>
 

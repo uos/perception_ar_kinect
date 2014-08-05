@@ -24,7 +24,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #uncomment if you have defined messages
 rosbuild_genmsg()
 #uncomment if you have defined services
-rosbuild_gensrv()
+#rosbuild_gensrv()
 
 #common commands for building c++ executables and libraries
 #rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
@@ -40,6 +40,10 @@ rosbuild_add_executable(ar_action_listener src/ar_action_listener.cpp)
 target_link_libraries(ar_action_listener json_prolog)
 rosbuild_add_executable(mytest src/mytest.cpp)
 target_link_libraries(mytest json_prolog)
+
+rosbuild_add_executable(query_content_server src/query_content_server.cpp)
+target_link_libraries(query_content_server json_prolog)
+rosbuild_add_executable(query_content_client src/query_content_client.cpp)
 
 rosbuild_add_boost_directories()
 rosbuild_add_executable(get_drink_color_server src/get_drink_color_server.cpp)
