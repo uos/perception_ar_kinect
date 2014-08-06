@@ -294,17 +294,19 @@ private:
   bool getPoseOfObject(string objInst, geometry_msgs::PoseStamped pose)
   {
     stringstream q;
-    q << "current_object_pose(" << objInst << ", [M00,M01,M02,M03,M10,M11,M12,M13,M20,M21,M22,M23,M30,M31,M32,M33])";
-    PrologBindings qr = pl_.once(q.str());
-    if (qr.begin() != qr.end())
+    q << "current_object_pose(knowrob:'" << objInst << "', [M00,M01,M02,M03,M10,M11,M12,M13,M20,M21,M22,M23,M30,M31,M32,M33])";
+    PrologQueryProxy qr = pl_.query(q.str());
+    PrologQueryProxy::iterator it = qr.begin();
+    if (it != qr.end())
     {
+      PrologBindings te = *it;
       pose.header.frame_id = "map";
       pose.header.stamp = ros::Time::now();
-      pose.pose.position.x = qr["M03"];
-      pose.pose.position.y = qr["M13"];
-      pose.pose.position.z = qr["M23"];
+      pose.pose.position.x = te["M03"];
+      pose.pose.position.y = te["M13"];
+      pose.pose.position.z = te["M23"];
       tf::Quaternion quat;
-      tf::Matrix3x3 m = tf::Matrix3x3(qr["M00"],qr["M01"],qr["M02"],qr["M10"],qr["M11"],qr["M12"],qr["M20"],qr["M21"],qr["M22"]);
+      tf::Matrix3x3 m = tf::Matrix3x3(te["M00"],te["M01"],te["M02"],te["M10"],te["M11"],te["M12"],te["M20"],te["M21"],te["M22"]);
       m.getRotation(quat); 
       pose.pose.orientation.x = quat.x();
       pose.pose.orientation.y = quat.y();
@@ -332,10 +334,12 @@ private:
   {
     stringstream q;
     q << "owl_has(knowrob:'" << objInst << "', knowrob:contains, Cont)";
-    PrologBindings qr = pl_.once(q.str());
-    if (qr.begin() != qr.end())
+    PrologQueryProxy qr = pl_.query(q.str());
+    PrologQueryProxy::iterator it = qr.begin();
+    if (it != qr.end())
     {
-      content = qr["Cont"].toString();
+      PrologBindings te = *it;
+      content = te["Cont"].toString();
       return true;
     }
     else {
