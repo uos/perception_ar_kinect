@@ -129,9 +129,13 @@ public:
 
     //identify pose by observed color and database recordings
     if(identifyContent()) {
+      db_content_av_ = false;
+      color_av_ = false;
       as_.setSucceeded(result_);
     }
     else {
+      db_content_av_ = false;
+      color_av_ = false;
       std::cout << "identifyContent failed" << std::endl;
       as_.setAborted();
     }
@@ -156,7 +160,7 @@ private:
     for (const ar_pose::ARMarker& obj : objects)
     {
       string type = knowrob_mapping::markerToObjClass(obj.id);
-      if(type.compare(goal_->container))
+      if(0 == type.compare(input_))
       {
         geometry_msgs::PoseStamped pose;
         pose.pose = obj.pose.pose;
@@ -200,7 +204,8 @@ private:
     //content color could be observed in image and content information in database is not given or expired
     if(color_av_ && !db_content_av_)
     {
-      if(color_.compare("none"))
+      cout << "only color_av" << endl;
+      if(0 == color_.compare("none"))
       {
         result_.content = "empty";
         return true;
@@ -307,7 +312,7 @@ private:
    * @param objInst  Name of the object instance in knowrob
    * @param pose     Last recorded pose of the object 
    */ 
-  bool getPoseOfObject(string objInst, geometry_msgs::PoseStamped pose)
+  bool getPoseOfObject(string objInst, geometry_msgs::PoseStamped& pose)
   {
     stringstream q;
     q << "current_object_pose(knowrob:'" << objInst << "', [M00,M01,M02,M03,M10,M11,M12,M13,M20,M21,M22,M23,M30,M31,M32,M33])";
@@ -346,7 +351,7 @@ private:
    * @param objInst  Name of the object instance in knowrob
    * @param content  Content recorded in the database
    */ 
-  bool getContentFromDatabase(string objInst, string content)
+  bool getContentFromDatabase(string& objInst, string& content)
   {
     stringstream q;
     q << "owl_has(knowrob:'" << objInst << "', knowrob:contains, Cont)";
@@ -369,7 +374,7 @@ private:
    * @param pose     Pose around which to identify color 
    * @param color    Dominant Color 
    */ 
-  bool callGetDrinkColorAction(geometry_msgs::PoseStamped pose, string color)
+  bool callGetDrinkColorAction(geometry_msgs::PoseStamped pose, string& color)
   {
     actionlib::SimpleActionClient<perception_ar_kinect::GetDrinkColorAction> ac ("get_drink_color", true);
     ac.waitForServer();
@@ -385,10 +390,11 @@ private:
       perception_ar_kinect::GetDrinkColorResult result;
       result = *ac.getResult();
       color = result.color;
-      std::cout << result.color << std::endl;
+      ac.cancelGoal();
       return true;
     }
     else {
+      ac.cancelGoal();
       return false;
     }
   }
