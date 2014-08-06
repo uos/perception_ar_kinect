@@ -95,6 +95,7 @@ public:
     catch (tf::TransformException& ex) {
       ROS_WARN("[get_drink_color] TF exception:\n%s", ex.what());
       as_.setAborted();
+      return;
     }
  
     //slice the image around given Position
