@@ -31,15 +31,17 @@ namespace knowrob_mapping
       <<static_cast<double>(p.getBasis().getRow(2).getZ())<<","
       <<pose.pose.position.z << ", 0.0, 0.0, 0.0, 1.0], ObjInst)";
     try {
-      json_prolog::PrologBindings r = prolog.once(a.str());
-      if(r.begin() != r.end()) {
-        return r["ObjInst"];
+      json_prolog::PrologQueryProxy r = prolog.query(a.str());
+      json_prolog::PrologQueryProxy::iterator it = r.begin();
+      if(it != r.end()) {
+        json_prolog::PrologBindings te = *it;
+        return te["ObjInst"].toString();
       }
       else {
         return "none";
       }
     } catch (json_prolog::PrologQueryProxy::QueryError ex) {
-      ROS_ERROR("[ar_action_listener]%s", ex.what());
+      ROS_ERROR("[knowrob_mapping]%s", ex.what());
       return "none";
     }
   }
