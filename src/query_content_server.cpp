@@ -45,7 +45,7 @@ private:
   std::string action_name_;
   perception_ar_kinect::QueryContentResult result_;
   perception_ar_kinect::QueryContentFeedback feedback_;
-  perception_ar_kinect::QueryContentGoalConstPtr goal_;
+  string input_;
 
   ros::Subscriber sub_;
   Prolog pl_;
@@ -60,23 +60,27 @@ private:
 
 public:
   QueryContentAction(std::string name) :
-    as_(nh_,name, false), action_name_(name),
+    as_(nh_,name, boost::bind(&QueryContentAction::executeCB, this, _1), false),
+    action_name_(name),
     observe_(false), db_content_av_(false), color_av_(false)
   {
-    as_.registerGoalCallback(boost::bind(&QueryContentAction::goalCB, this));
     sub_ = nh_.subscribe("/ar_pose_markers", 1, &QueryContentAction::markerCallback ,this); 
     as_.start();
   } 
 
-  void goalCB()
+  void executeCB(const perception_ar_kinect::QueryContentGoalConstPtr & goal)
   {
-    goal_ = as_.acceptNewGoal();
+    input_ = goal->container;;
 
-    int r = instOrClass(goal_->container, "Container");
+    int r = instOrClass(input_, "Container");
     if(r == 0) { //input param is known individual
-      objInst_ = goal_->container;
+      feedback_.feedback = "Input is known individual";
+      as_.publishFeedback(feedback_);
+      objInst_ = input_;
     }
     else if(r == 1) { // input param is a class
+      feedback_.feedback = "Input is a container class -> activate MarkerCallback";
+      as_.publishFeedback(feedback_);
       observe_ = true; //activate MarkerCallback
       ros::Time begin = ros::Time::now();
       ros::Duration d(0.0);
@@ -89,7 +93,7 @@ public:
       {
         observe_ = false;
         stringstream f;
-        f << "Object of class " << goal_->container << " not visible";
+        f << "Object of class " << input_ << " not visible";
         feedback_.feedback = f.str();
         as_.publishFeedback(feedback_);
         as_.setAborted();
@@ -102,12 +106,24 @@ public:
     //query recorded content from database 
     if(getContentFromDatabase(objInst_, db_content_)) {
       db_content_av_ = true; 
+      stringstream f;
+      f << "Found the following content in database: " << db_content_;
+      feedback_.feedback = f.str();
+      as_.publishFeedback(feedback_);
+    }
+    else {
+      feedback_.feedback = "No content record in database";
+      as_.publishFeedback(feedback_);
     }
     //query pose from database and look for content color in image
     geometry_msgs::PoseStamped pose;
     if(getPoseOfObject(objInst_, pose)) {
       if(callGetDrinkColorAction(pose, color_)) {
         color_av_ = true; 
+        stringstream f;
+        f << "Found the following color in image: " << color_;
+        feedback_.feedback = f.str();
+        as_.publishFeedback(feedback_);
       }
     }
 
@@ -131,7 +147,7 @@ private:
    */
   void markerCallback(const ar_pose::ARMarkers& markers)
   {
-    if(!as_.isActive() || !observe_){
+    if(!observe_){
       return;
     }
     feedback_.feedback = "markerCallback active";
