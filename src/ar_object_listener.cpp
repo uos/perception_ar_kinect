@@ -25,7 +25,7 @@ class ARListener
 public:
   ARListener()
   {
-    ros::Subscriber sub = n_.subscribe("/ar_pose_markers", 100, &ARListener::arCallback, this);
+    ros::Subscriber sub = n_.subscribe("/ar_pose_markers", 1, &ARListener::arCallback, this);
     ros::spin();
   }
 
