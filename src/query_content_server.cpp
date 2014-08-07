@@ -30,6 +30,7 @@
 #include <ar_pose/ARMarkers.h>
 #include <ar_pose/ARMarker.h>
 #include <tf/transform_datatypes.h>
+#include <tf/transform_listener.h>
 #include <geometry_msgs/PoseStamped.h>
 
 #include "knowrobMapping.h"
@@ -41,6 +42,7 @@ class QueryContentAction
 {
 private:
   ros::NodeHandle nh_;
+  tf::TransformListener tflistener_;
   actionlib::SimpleActionServer<perception_ar_kinect::QueryContentAction> as_;
   std::string action_name_;
   perception_ar_kinect::QueryContentResult result_;
@@ -143,6 +145,19 @@ public:
 
 
 private:
+
+  void normalizePoseStamped(geometry_msgs::PoseStamped& pose)
+  {
+    tf::Quaternion n = tf::Quaternion(pose.pose.orientation.x, pose.pose.orientation.y,
+      pose.pose.orientation.z, pose.pose.orientation.w);
+    tf::Quaternion nn = n.normalized();
+    pose.pose.orientation.x = nn.x();
+    pose.pose.orientation.y = nn.y();
+    pose.pose.orientation.z = nn.z();
+    pose.pose.orientation.w = nn.w();
+  }
+
+
   /**
    * ARMarker Callback, activated if knowrob class is passed as goal 
    *
@@ -162,11 +177,27 @@ private:
       string type = knowrob_mapping::markerToObjClass(obj.id);
       if(0 == type.compare(input_))
       {
-        geometry_msgs::PoseStamped pose;
-        pose.pose = obj.pose.pose;
-        pose.header = obj.header;
-        objInst_ = knowrob_mapping::findObjInst(type, pose); 
-        observe_ = false;
+        //transform pose to map frame
+        string targetFrame = "map";
+        geometry_msgs::PoseStamped inPose;
+        geometry_msgs::PoseStamped outPose;
+        inPose.pose = obj.pose.pose;
+        inPose.header = obj.header;
+        normalizePoseStamped(inPose);
+        try {
+          tflistener_.waitForTransform(targetFrame, inPose.header.frame_id, ros::Time(0), ros::Duration(10.0));
+          tflistener_.transformPose(targetFrame, inPose, outPose); 
+          if(knowrob_mapping::findObjInst(type, outPose, objInst_)) { 
+            stringstream f;
+            f << "Found " << objInst_ << " as currently visible Instance of " << input_;
+            feedback_.feedback = f.str();
+            as_.publishFeedback(feedback_);
+            observe_ = false;
+          }
+          else {}
+        } catch (tf::TransformException ex) {
+          ROS_ERROR("[query_content_server]%s", ex.what());
+        }
       }
     }
   }

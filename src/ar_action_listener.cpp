@@ -123,20 +123,26 @@ private:
                   hasStartTime = false;
                   // filling action took place if actOnObject was in vertical position for >3sec?
                   if (d.toSec() > 5.0) {
-                    //TODO create FIllingActionInst
-                    cout << "detected filling Process" << endl;
-                    string toLocInst = knowrob_mapping::findObjInst(toLoc.type, toLoc.pose); 
-                    string objActOnInst = knowrob_mapping::findObjInst(objActOn.type, objActOn.pose);
-                    stringstream a;
-                    a << "create_action_inst_perception('http://ias.cs.tum.edu/kb/knowrob.owl#FillingProcess',['"
-                      << objActOnInst << "'],['" << toLocInst << "'], []," << startTime.toSec() << ","
-                      << endTime.toSec() << ", ActionInst)";
-                    try {
-                      pl.query(a.str());
-                    } catch (json_prolog::PrologQueryProxy::QueryError ex) {
-                      ROS_ERROR("[ar_action_listener]%s", ex.what());
+                    ROS_INFO("[ar_action_listener]Detected filling Process");
+                    string toLocInst;
+                    string objActOnInst;
+                    bool map_loc = knowrob_mapping::findObjInst(toLoc.type, toLoc.pose, toLocInst); 
+                    bool map_acton = knowrob_mapping::findObjInst(objActOn.type, objActOn.pose, objActOnInst);
+                    if (map_loc && map_acton)
+                    {
+                      stringstream a;
+                      a << "create_action_inst_perception('http://ias.cs.tum.edu/kb/knowrob.owl#FillingProcess',['"
+                        << objActOnInst << "'],['" << toLocInst << "'], []," << startTime.toSec() << ","
+                        << endTime.toSec() << ", ActionInst)";
+                      try {
+                        pl.query(a.str());
+                      } catch (json_prolog::PrologQueryProxy::QueryError ex) {
+                        ROS_ERROR("[ar_action_listener]%s", ex.what());
+                      }
                     }
-                    cout << a.str() << endl;
+                    else {
+                      ROS_INFO("[ar_action_listener]Objects involved in detected Action could not be grounded in database");
+                    }
                   }
                 }
               }

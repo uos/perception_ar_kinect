@@ -2,6 +2,9 @@
 
 namespace knowrob_mapping
 {
+  /*
+   * maps marker ids to corresponding knowrob classes
+   */
   std::string markerToObjClass(int id)
   {
     switch(id) {
@@ -12,8 +15,16 @@ namespace knowrob_mapping
       default: return "HumanScaleObject";}
   }
 
+  /*
+   * identifies object instance inside knowrob corresponding
+   * to object class observed at a certain position
+   *
+   * @param type     Object Class
+   * @param pose     Pose of object in Map Frame
+   * @param objInst  found corresponding Object Instance
+   */
 
-  std::string findObjInst(std::string& type, geometry_msgs::PoseStamped& pose)
+  bool findObjInst(std::string& type, geometry_msgs::PoseStamped& pose, std::string& objInst)
   {
     tf::Quaternion q = tf::Quaternion(pose.pose.orientation.x, pose.pose.orientation.y,
       pose.pose.orientation.z, pose.pose.orientation.w);
@@ -35,14 +46,15 @@ namespace knowrob_mapping
       json_prolog::PrologQueryProxy::iterator it = r.begin();
       if(it != r.end()) {
         json_prolog::PrologBindings te = *it;
-        return te["ObjInst"].toString();
+        objInst = te["ObjInst"].toString();
+        return true;
       }
       else {
-        return "none";
+        return false;
       }
     } catch (json_prolog::PrologQueryProxy::QueryError ex) {
       ROS_ERROR("[knowrob_mapping]%s", ex.what());
-      return "none";
+      return false;
     }
   }
 }
