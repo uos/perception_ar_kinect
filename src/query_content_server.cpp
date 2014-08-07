@@ -1,5 +1,5 @@
 /*
- TODO: needs revision
+   TODO: brief overview
    - check wether string input is individual or class (+ of type container)
    a) for individual
    - check content in database
@@ -58,6 +58,7 @@ private:
   string db_content_;
   string color_;
   string objInst_;
+  geometry_msgs::PoseStamped objPose_;
   
 
 public:
@@ -74,39 +75,15 @@ public:
   {
     input_ = goal->container;;
 
-    int r = instOrClass(input_, "Container");
-    if(r == 0) { //input param is known individual
-      feedback_.feedback = "Input is known individual";
+    if(!groundInput(ros::Duration(3.0))) {
+      feedback_.feedback = "Input could not be grounded to knowrob individual with recorded pose";
       as_.publishFeedback(feedback_);
-      objInst_ = input_;
-    }
-    else if(r == 1) { // input param is a class
-      feedback_.feedback = "Input is a container class -> activate MarkerCallback";
-      as_.publishFeedback(feedback_);
-      observe_ = true; //activate MarkerCallback
-      ros::Time begin = ros::Time::now();
-      ros::Duration d(0.0);
-      ros::Duration f(3.0);
-      // wait till observe false or certain time passed
-      while(observe_ && (d < f)) {
-        d = ros::Time::now() - begin;
-      }
-      if (observe_)
-      {
-        observe_ = false;
-        stringstream f;
-        f << "Object of class " << input_ << " not visible";
-        feedback_.feedback = f.str();
-        as_.publishFeedback(feedback_);
-        as_.setAborted();
-      }
-    } 
-    else {
       as_.setAborted();
     }
     
     //query recorded content from database 
     if(getContentFromDatabase(objInst_, db_content_)) {
+      //CASE NOT TESTED
       db_content_av_ = true; 
       stringstream f;
       f << "Found the following content in database: " << db_content_;
@@ -117,29 +94,59 @@ public:
       feedback_.feedback = "No content record in database";
       as_.publishFeedback(feedback_);
     }
-    //query pose from database and look for content color in image
-    geometry_msgs::PoseStamped pose;
-    if(getPoseOfObject(objInst_, pose)) {
-      if(callGetDrinkColorAction(pose, color_)) {
-        color_av_ = true; 
-        stringstream f;
-        f << "Found the following color in image: " << color_;
-        feedback_.feedback = f.str();
-        as_.publishFeedback(feedback_);
+    //look for content color in image
+    if(callGetDrinkColorAction(objPose_, color_)) {
+      color_av_ = true; 
+      stringstream f;
+      f << "Found the following color in image: " << color_;
+      feedback_.feedback = f.str();
+      as_.publishFeedback(feedback_);
+    }
+
+    //content recorded in database and color observed in image 
+    //NOT TESTED
+    if(db_content_av_ && color_av_) {
+      if(doContentAndColorMatch()) {
+        as_.setSucceeded(result_);
+      }
+      else { //regard content information as expired and delete it from database
+        db_content_av_ = false;
+        stringstream q;
+        q << "rdf_retractall('" << objInst_ << "', knowrob:contains, _)";
+        PrologBindings qr = pl_.once(q.str());
       }
     }
 
-    //identify pose by observed color and database recordings
-    if(identifyContent()) {
-      db_content_av_ = false;
-      color_av_ = false;
+    //only color information from image
+    if(color_av_ && !db_content_av_) {
+      if(0 == color_.compare("none")) {
+        result_.content = "empty";
+        as_.setSucceeded(result_);
+      }
+      else if(identifyContent()) {
+        db_content_av_ = false;
+        color_av_ = false;
+        as_.setSucceeded(result_);
+      }
+      else {
+        db_content_av_ = false;
+        color_av_ = false;
+        std::cout << "identifyContent failed" << std::endl;
+        as_.setAborted();
+      }
+    }
+    //only record in database
+    else if(db_content_av_) {
+      feedback_.feedback = "Object is not visible, but content was recorded in the database previously";
+      as_.publishFeedback(feedback_);
+      result_.content = db_content_; 
       as_.setSucceeded(result_);
     }
     else {
-      db_content_av_ = false;
-      color_av_ = false;
-      std::cout << "identifyContent failed" << std::endl;
-      as_.setAborted();
+      feedback_.feedback = "Object is neither visible nor is its content recorded in the database";
+      as_.publishFeedback(feedback_);
+      result_.content = "unknown";
+      as_.setSucceeded(result_);
     }
   }
 
@@ -169,8 +176,6 @@ private:
     if(!observe_){
       return;
     }
-    feedback_.feedback = "markerCallback active";
-    as_.publishFeedback(feedback_);
     const std::vector<ar_pose::ARMarker>& objects = markers.markers; 
     for (const ar_pose::ARMarker& obj : objects)
     {
@@ -188,6 +193,7 @@ private:
           tflistener_.waitForTransform(targetFrame, inPose.header.frame_id, ros::Time(0), ros::Duration(10.0));
           tflistener_.transformPose(targetFrame, inPose, outPose); 
           if(knowrob_mapping::findObjInst(type, outPose, objInst_)) { 
+            objPose_ = outPose;
             stringstream f;
             f << "Found " << objInst_ << " as currently visible Instance of " << input_;
             feedback_.feedback = f.str();
@@ -204,6 +210,25 @@ private:
 
 
   /**
+   * checks wether the content specified in the database has the color found in the image
+   */
+  bool doContentAndColorMatch()
+  {
+    stringstream q;
+    q << "owl_has('" << db_content_ << "', knowrob:mainColorOfObject, knowrob'" << color_ << "')";
+    PrologBindings qr = pl_.once(q.str());
+    if (qr.begin() != qr.end()) { // content and color match
+      feedback_.feedback = "Content recorded in database and observed color match";
+      as_.publishFeedback(feedback_);
+      result_.content = db_content_; 
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
+  /**
    * identifies the content of objInst_ based on the observed color and
    * the information given in the database 
    *
@@ -212,94 +237,123 @@ private:
    */
   bool identifyContent()
   { 
-   //content recorded in database and color observed in image 
-    if(db_content_av_ && color_av_) {
-      stringstream q;
-      q << "owl_has(knowrob:'" << db_content_ << "', knowrob:mainColorOfObject, knowrob'" << color_ << "')";
-      PrologBindings qr = pl_.once(q.str());
-      if (qr.begin() != qr.end()) { // content and color match
-        feedback_.feedback = "Content recorded in database and observed color match";
-        as_.publishFeedback(feedback_);
-        result_.content = db_content_; 
+    stringstream q;
+    //query for general content of container class
+    q << "owl_has('" << objInst_ << "', rdf:type, _ObjClass),"
+      << "class_properties(_ObjClass, knowrob:contains, ContClass),"
+    //find content subclasses with correct properties
+      << "subclass_by_prop_val(ContClass, knowrob:mainColorOfObject, knowrob:'" << color_ << "', Obj)";
+    PrologQueryProxy qp = pl_.query(q.str());
+    PrologQueryProxy::iterator it = qp.begin();
+    int count = 0;
+    stringstream f;
+    for(it = qp.begin(); it != qp.end(); it++)
+    {
+      PrologBindings qr = *it;
+      if (count == 0) {
+        f << "In general " << input_ << " contains substances of type " << qr["ContClass"].toString() << ".\n";
+        f << "The following substances of type " << qr["ContClass"].toString() << " with " << color_ << " are known:\n";
+      }
+      f << qr["Obj"].toString() << "\n";
+      result_.content = qr["Obj"].toString();
+      count++;
+    }
+    feedback_.feedback = f.str();
+    as_.publishFeedback(feedback_);
+    //content can be clearly identified by properties/color only
+    if (count == 1) {
+      feedback_.feedback = "Content could be identified by properties/color only";
+      as_.publishFeedback(feedback_);
+      return true;
+    } 
+   
+    //TODO: fix from here
+    cout << "test: only color_av" << endl;
+    //else find actions which lead to content change
+    q << ", find_cause_of_appearance('" << objInst_ << "', knowrob:contains, Obj, _PRS),"
+      << "member(_Pair, _PRS), pairs_keys_values([_Pair], [Action], [ObjActOn]),";
+    stringstream q_copy;
+    q_copy << q.str();
+
+    //check for action instances working on objects with correct properties
+    q << "object_possibly_available(ObjActOn, ObjInst),"
+      << "find_latest_action_inst(Action, [ObjInst], [], ['" << objInst_ << "'], ActionInst)";
+    qp = pl_.query(q.str());
+    for(it = qp.begin(); it != qp.end(); it++)
+    {
+      PrologBindings qr = *it;
+      result_.content = qr["ObjInst"].toString(); 
+      stringstream f;
+      f << "Content of " << objInst_ << ", is same as content of " << result_.content << ".";
+      feedback_.feedback = f.str();
+      as_.publishFeedback(feedback_);
+      return true;
+      //TODO: in case of more than one solution compare timestamps
+    }
+
+    //TODO: find content based on the availability of sources 
+       
+    ROS_INFO("[query_content_server]end of identifyContent()");
+    return true;
+  }
+
+  
+
+
+  /**
+   * Finds knowrob individual corresponding to input and sets its pose
+   *
+   * case 1: if input is known individual, its pose is queried from the database
+   * case 2: if input is a knowrob class, the next visible instance of that class
+   *         is used as an individual 
+   *
+   * @param timeout  specifies how long MarkerCallback is active
+   */ 
+  bool groundInput(ros::Duration timeout)
+  {
+    int r = instOrClass(input_, "Container");
+    if(r == 0) { //input param is known individual
+      feedback_.feedback = "Input is known individual";
+      as_.publishFeedback(feedback_);
+      objInst_ = "http://ias.cs.tum.edu/kb/knowrob.owl#";
+      objInst_ += input_;
+      //query pose from database
+      if(getPoseOfObject(input_, objPose_)) {
         return true;
       }
       else {
-        // regard content information as expired and delete it from database
-        db_content_av_ = false;
-        q.str("");
-        q << "rdf_retractall(knowrob:'" << objInst_ << "', knowrob:contains, _)";
-        PrologBindings qr = pl_.once(q.str());
+        feedback_.feedback = "No pose information for input in database";
+        as_.publishFeedback(feedback_);
+        return false;
       }
     }
-
-    //content color could be observed in image and content information in database is not given or expired
-    if(color_av_ && !db_content_av_)
-    {
-      cout << "only color_av" << endl;
-      if(0 == color_.compare("none"))
-      {
-        result_.content = "empty";
-        return true;
-      }
-      stringstream q;
-      //query for general content of container class
-      q << "owl_has(knowrob:'" << objInst_ << "', rdf:type, _ObjClass),"
-        << "class_properties(_ObjClass, knowrob:contains, _ContClass),"
-      //find content subclasses with correct properties
-        << "subclass_by_prop_val(_ContClass, knowrob:mainColorOfObject, knowrob:'" << color_ << "', Obj)";
-      PrologQueryProxy qp = pl_.query(q.str());
-      PrologQueryProxy::iterator it = qp.begin(); it++;
-      if(it == qp.end()) //single solution
-      {
-        //content can be clearly identified by properties/color only
-        PrologBindings qr = *qp.begin();
-        result_.content = qr["Obj"].toString();
-        //TODO: create instance and insert into database
-        return true;
-      } 
-      //else find actions which lead to content change
-      q << ", find_cause_of_appearance(knowrob:'" << objInst_ << "', knowrob:contains, Obj, _PRS),"
-        << "member(_Pair, _PRS), pairs_keys_values([_Pair], [Action], [ObjActOn]),";
-      stringstream q_copy;
-      q_copy << q.str();
-
-      //check for action instances working on objects with correct properties
-      q << "object_possibly_available(ObjActOn, ObjInst),"
-        << "find_latest_action_inst(Action, [ObjInst], [], ['http://ias.cs.tum.edu/kb/knowrob.owl#" << objInst_ << "'], ActionInst)";
-      qp = pl_.query(q.str());
-      for(it = qp.begin(); it != qp.end(); it++)
-      {
-        PrologBindings qr = *it;
-        result_.content = qr["ObjInst"].toString(); 
+    else if(r == 1) { //input param is a class
+      feedback_.feedback = "Input is a container class -> activate MarkerCallback";
+      as_.publishFeedback(feedback_);
+      observe_ = true; //activate MarkerCallback
+      ros::Time begin = ros::Time::now();
+      ros::Duration d(0.0);
+      // wait till correct marker was found or certain time passed
+      while(observe_ && (d < timeout)) {
+        d = ros::Time::now() - begin; }
+      if (observe_) {
+        observe_ = false;
         stringstream f;
-        f << "Content of " << objInst_ << ", is same as content of " << result_.content << ".";
+        f << "Object of class " << input_ << " not visible";
         feedback_.feedback = f.str();
         as_.publishFeedback(feedback_);
-        return true;
-        //TODO: in case of more than one solution compare timestamps
+        return false;
       }
-
-      //TODO: find content based on the availability of sources 
-         
-      ROS_INFO("[query_content_server]end of identifyContent()");
-      return true;
-    }
-
-    //content recorded in database
-    else if(db_content_av_) {
-      feedback_.feedback = "Object is not visible, but content was recorded in the database previously";
-      as_.publishFeedback(feedback_);
-      result_.content = db_content_; 
-      return true;
+      else {
+        return true;
+      }
     }
     else {
-      feedback_.feedback = "Object is neither visible nor is its content recorded in the database";
+      feedback_.feedback = "Input is neither a known individual of type container, nor a container class";
       as_.publishFeedback(feedback_);
-      result_.content = "unknown";
-      return true;
-    }
+      return false;
+    } 
   }
-
 
   /**
    * checks wether an object label is a known individual or class in knowrob 
@@ -326,8 +380,6 @@ private:
         if (qr.begin() != qr.end())
           return 1; 
         else {
-          feedback_.feedback = "Input is neither a known individual of type container, nor a container class";
-          as_.publishFeedback(feedback_);
           return 2;
         }
       }
@@ -368,7 +420,7 @@ private:
     }
     else {
       stringstream f;
-      f << "Position of " << objInst_ << " is not recorded";
+      f << "Position of " << objInst << " is not recorded";
       feedback_.feedback = f.str();
       as_.publishFeedback(feedback_);
       return false;
@@ -385,7 +437,7 @@ private:
   bool getContentFromDatabase(string& objInst, string& content)
   {
     stringstream q;
-    q << "owl_has(knowrob:'" << objInst << "', knowrob:contains, Cont)";
+    q << "owl_has('" << objInst << "', knowrob:contains, Cont)";
     PrologQueryProxy qr = pl_.query(q.str());
     PrologQueryProxy::iterator it = qr.begin();
     if (it != qr.end())
@@ -416,7 +468,8 @@ private:
     goal.bb_width = 0.1;
     ac.sendGoal(goal); 
     bool succeeded = ac.waitForResult(ros::Duration(1.0));
-    if (succeeded)
+    string state = ac.getState().toString();
+    if (succeeded && (0 == state.compare("SUCCEEDED")))
     {
       perception_ar_kinect::GetDrinkColorResult result;
       result = *ac.getResult();
