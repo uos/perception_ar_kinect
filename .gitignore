@@ -5,6 +5,7 @@ srv_gen
 msg/GetDrinkColor*.msg
 msg/QueryContent*.msg
 src/perception_ar_kinect
+owl_export
 
 data/*.jpg
 

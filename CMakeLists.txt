@@ -40,6 +40,8 @@ rosbuild_add_executable(ar_action_listener src/ar_action_listener.cpp)
 target_link_libraries(ar_action_listener json_prolog)
 rosbuild_add_executable(mytest src/mytest.cpp)
 target_link_libraries(mytest json_prolog)
+rosbuild_add_executable(export src/export.cpp)
+target_link_libraries(export json_prolog)
 
 rosbuild_add_executable(query_content_server src/query_content_server.cpp)
 target_link_libraries(query_content_server json_prolog)
