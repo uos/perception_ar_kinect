@@ -76,7 +76,7 @@ private:
           << static_cast<double>(p.getBasis().getRow(1).getZ()) << "," << outPose.pose.position.y << ","
           << static_cast<double>(p.getBasis().getRow(2).getX()) << "," << static_cast<double>(p.getBasis().getRow(2).getY()) << ","
           << static_cast<double>(p.getBasis().getRow(2).getZ()) << ","
-          << outPose.pose.position.z << ", 0.0, 0.0, 0.0, 1.0], ['ARKinectObjectDetection'], ObjInst)";
+          << outPose.pose.position.z << ", 0.0, 0.0, 0.0, 1.0], ['ARKinectObjectDetection'],"<< obj.header.stamp << ", ObjInst)";
         try {
           pl.query(s.str());
         } catch(json_prolog::PrologQueryProxy::QueryError ex) {

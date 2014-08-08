@@ -1,7 +1,7 @@
 
 :- module(knowrob_perception_ext,
     [
-      create_object_perception_with_instance_check/4,
+      create_object_perception_with_instance_check/5,
       create_action_inst_perception/7,
       same_object/3
     ]).
@@ -54,8 +54,7 @@ create_action_inst_perception(Action, ObjActOnSet, ToLocSet, FromLocSet, StartTi
       rdf_instance_from_class(FromLocType, FromLoc);
       (FromLoc = FromLocType)),
     rdf_assert(ActionInst, knowrob:'fromLocation', FromLoc))),
-  % for now
-  get_timepoint(Start), get_timepoint(End), 
+  create_timepoint(StartTime, Start), create_timepoint(EndTime, End), 
   rdf_assert(ActionInst, knowrob:'startTime', Start),
   rdf_assert(ActionInst, knowrob:'endTime', End).
 
@@ -73,12 +72,12 @@ create_action_inst_perception(Action, ObjActOnSet, ToLocSet, FromLocSet, StartTi
 % @param PerceptionTypes  PerceptionType used (eg. ARKinectObjectPerception)
 % @param ObjInst          created or linked object instance
 
-create_object_perception_with_instance_check(ObjClass, ObjPose, PerceptionTypes, ObjInst) :-
+create_object_perception_with_instance_check(ObjClass, ObjPose, PerceptionTypes, TimeStamp, ObjInst) :-
   same_object(ObjClass, ObjPose, ObjInst) ->
   % if already existing
-  create_instance_perception(ObjInst, ObjPose, PerceptionTypes);
+  create_instance_perception_with_time(ObjInst, ObjPose, PerceptionTypes, TimeStamp);
   % else create new object
-  create_object_perception(ObjClass, ObjPose, PerceptionTypes, ObjInst).
+  create_object_perception_with_time(ObjClass, ObjPose, PerceptionTypes, TimeStamp, ObjInst).
 
 
 %% similar_object
@@ -112,14 +111,47 @@ same_object(ObjClass, ObjPose, ObjInst) :-
 
 
 
-%% create_instance_perception
+%% create_instance_perception_with_time
 %
 % creates a perception instance and the pose matrix where the ObjInst was perceived
 % and links them to the given ObjInst
 
-create_instance_perception(ObjInst, ObjPose, PerceptionTypes) :-
-   create_perception_instance(PerceptionTypes, Perception),
+create_instance_perception_with_time(ObjInst, ObjPose, PerceptionTypes, TimeStamp) :-
+   create_perception_instance_with_time(PerceptionTypes, Perception, TimeStamp),
    set_object_perception(ObjInst, Perception),
    set_perception_pose(Perception, ObjPose).
+
+
+%% create_object_perception_with_time
+%
+% creates a new object, a perception instance and the pose matrix where the ObjInst was perceived
+% and links them all together 
+
+create_object_perception_with_time(ObjClass, ObjPose, PerceptionTypes, TimeStamp, ObjInst) :-
+    rdf_instance_from_class(ObjClass, ObjInst),
+    create_perception_instance_with_time(PerceptionTypes, Perception, TimeStamp),
+    set_object_perception(ObjInst, Perception),
+    set_perception_pose(Perception, ObjPose).
+
+
+
+%% create_perception_instance_with_time
+%
+% create_perception_instance having all the types in PerceptionTypes and
+% the given TimeStamp
+
+create_perception_instance_with_time(PerceptionTypes, Perception, TimeStamp) :-
+  % create individual from first type in the list
+  nth0(0, PerceptionTypes, PType),
+  atom_concat('http://ias.cs.tum.edu/kb/knowrob.owl#', PType, PClass),
+  rdf_instance_from_class(PClass, Perception),
+  % set all other types
+  findall(PC, (member(PT, PerceptionTypes),
+               atom_concat('http://ias.cs.tum.edu/kb/knowrob.owl#', PT, PC),
+               rdf_assert(Perception, rdf:type, PC)), _),
+  % create detection time point
+  create_timepoint(TimeStamp, TimePoint),
+  rdf_assert(Perception, knowrob:startTime, TimePoint).
+
 
 

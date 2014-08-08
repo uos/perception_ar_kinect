@@ -132,8 +132,8 @@ private:
                     {
                       stringstream a;
                       a << "create_action_inst_perception('http://ias.cs.tum.edu/kb/knowrob.owl#FillingProcess',['"
-                        << objActOnInst << "'],['" << toLocInst << "'], []," << startTime.toSec() << ","
-                        << endTime.toSec() << ", ActionInst)";
+                        << objActOnInst << "'],['" << toLocInst << "'], []," << startTime << ","
+                        << endTime << ", ActionInst)";
                       try {
                         pl.query(a.str());
                       } catch (json_prolog::PrologQueryProxy::QueryError ex) {
