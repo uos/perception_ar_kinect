@@ -131,7 +131,6 @@ public:
       else {
         db_content_av_ = false;
         color_av_ = false;
-        std::cout << "identifyContent failed" << std::endl;
         as_.setAborted();
       }
     }
@@ -247,6 +246,8 @@ private:
     PrologQueryProxy::iterator it = qp.begin();
     int count = 0;
     stringstream f;
+    stringstream conts;
+    conts << "[";
     for(it = qp.begin(); it != qp.end(); it++)
     {
       PrologBindings qr = *it;
@@ -254,10 +255,15 @@ private:
         f << "In general " << input_ << " contains substances of type " << qr["ContClass"].toString() << ".\n";
         f << "The following substances of type " << qr["ContClass"].toString() << " with " << color_ << " are known:\n";
       }
+      else {
+        conts << ",";
+      }
       f << qr["Obj"].toString() << "\n";
+      conts << "'" << qr["Obj"].toString() << "'"; 
       result_.content = qr["Obj"].toString();
       count++;
     }
+    conts << "]";
     feedback_.feedback = f.str();
     as_.publishFeedback(feedback_);
     //content can be clearly identified by properties/color only
@@ -266,35 +272,43 @@ private:
       as_.publishFeedback(feedback_);
       return true;
     } 
+    else if (count == 0) {
+      //abort
+    }
    
-    //TODO: fix from here
-    cout << "test: only color_av" << endl;
     //else find actions which lead to content change
-    q << ", find_cause_of_appearance('" << objInst_ << "', knowrob:contains, Obj, _PRS),"
-      << "member(_Pair, _PRS), pairs_keys_values([_Pair], [Action], [ObjActOn]),";
-    stringstream q_copy;
-    q_copy << q.str();
+    q.str("");
+    q << "findall(PRS, (member(Drink," << conts.str() << "),"
+      <<   "find_cause_of_appearance('" << objInst_ << "', knowrob:contains, Drink, PRS)), _PRSS),"
+      << "findall(ActInst, (member(Set, _PRSS), member(Pair, Set), pairs_keys_values([Pair],[Action],[ObjActOn]),"
+      <<   "object_possibly_available(ObjActOn, ObjInst),"
+      <<   "find_latest_action_inst(Action, [ObjInst], ['" << objInst_ << "'], [], ActInst)), _ActionList),"
+      << "sort(_ActionList, _SortedActionList), member(ActionInst, _SortedActionList),"
+      << "owl_has(ActionInst, knowrob:'objectActedOn', SourceObj)";
 
-    //check for action instances working on objects with correct properties
-    q << "object_possibly_available(ObjActOn, ObjInst),"
-      << "find_latest_action_inst(Action, [ObjInst], [], ['" << objInst_ << "'], ActionInst)";
     qp = pl_.query(q.str());
     for(it = qp.begin(); it != qp.end(); it++)
     {
       PrologBindings qr = *it;
-      result_.content = qr["ObjInst"].toString(); 
+      result_.content = qr["SourceObj"].toString(); 
       stringstream f;
-      f << "Content of " << objInst_ << ", is same as content of " << result_.content << ".";
+      f << qr["ActionInst"].toString() << " was observed previously. \n"
+        << "Thus content of " << objInst_ << ", is same as content of " << result_.content << ".";
       feedback_.feedback = f.str();
       as_.publishFeedback(feedback_);
       return true;
       //TODO: in case of more than one solution compare timestamps
     }
+    if(qp.begin() == qp.end())
+    {
+      stringstream f;
+      f << "No Action observed which leads to desired changes";
+      feedback_.feedback = f.str();
+      as_.publishFeedback(feedback_);
+      return true;
+    }
 
-    //TODO: find content based on the availability of sources 
-       
-    ROS_INFO("[query_content_server]end of identifyContent()");
-    return true;
+    //Optional TODO: find content based on the availability of sources 
   }
 
   
