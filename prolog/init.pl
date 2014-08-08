@@ -23,6 +23,7 @@
 :- register_ros_package(perception_ar_kinect).
 
 :- use_module(library('knowrob_perception_ext')).
+:- use_module(library('import_owl')).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

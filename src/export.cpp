@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
     string file = "/home/student/a/ahaeuser/ros-hydro/dry/stacks/perception_ar_kinect/owl_export/";
     stringstream b;
     b << "export_object_class(knowrob:'DrinkingGlass_bneXbLGX', '" << file << "drinkingGlass.owl'),"
+      << "export_object(knowrob:'DrinkingGlass_bneXbLGX', '" << file << "drinkingGlassPercept.owl'),"
       << "export_object_class(knowrob:'TetraPak_vUXiHMJy', '" << file << "tetraPak.owl'),"
       << "owl_individual_of(F, knowrob:'FillingProcess'),"
       << "export_object_class(F, '" << file << "fillingProcess.owl')";
