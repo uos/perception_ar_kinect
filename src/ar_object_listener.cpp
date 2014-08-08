@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <ros/ros.h>
+#include <ros/time.h>
 #include <json_prolog/prolog.h>
 
 #include <ar_pose/ARMarkers.h>
@@ -26,7 +27,11 @@ public:
   ARListener()
   {
     ros::Subscriber sub = n_.subscribe("/ar_pose_markers", 1, &ARListener::arCallback, this);
-    ros::spin();
+
+    while (ros::ok()){
+      ros::Duration(0.5).sleep();
+      ros::spinOnce();
+    }
   }
 
 private:

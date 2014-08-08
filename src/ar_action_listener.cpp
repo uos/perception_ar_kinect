@@ -32,7 +32,10 @@ public:
   {
     hasStartTime = false;
     ros::Subscriber sub_ = n_.subscribe("/ar_pose_markers", 1, &ARFillingActionListener::arCallback, this);
-    ros::spin();
+    while (ros::ok()){
+      ros::Duration(0.5).sleep();
+      ros::spinOnce();
+    }
   }
 
 private:
