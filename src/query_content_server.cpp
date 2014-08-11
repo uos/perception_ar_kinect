@@ -481,8 +481,8 @@ private:
     perception_ar_kinect::GetDrinkColorGoal goal;
     goal.pose = pose;
     //assume container is a DrinkingGlass
-    goal.bb_height = 0.12;
-    goal.bb_width = 0.1;
+    goal.bb_height = 0.15;
+    goal.bb_width = 0.05;
     ac.sendGoal(goal); 
     bool succeeded = ac.waitForResult(ros::Duration(1.0));
     string state = ac.getState().toString();

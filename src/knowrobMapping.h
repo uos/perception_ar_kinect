@@ -10,8 +10,13 @@ namespace knowrob_mapping
     switch(id) {
       case 0: return "TetraPak";
       case 1: return "TetraPak";
-      case 2: return "DrinkingGlass";
-      case 3: return "DrinkingGlass";
+      case 2: return "TetraPak";
+      case 3: return "TetraPak";
+      case 4: return "TetraPak";
+      case 5: return "TetraPak";
+      case 6: return "TetraPak";
+      case 7: return "TetraPak";
+      case 8: return "DrinkingGlass";
       default: return "HumanScaleObject";}
   }
 
