@@ -75,77 +75,79 @@ public:
   {
     input_ = goal->container;;
 
-    if(!groundInput(ros::Duration(3.0))) {
+    if(!groundInput(ros::Duration(2.0))) {
       feedback_.feedback = "Input could not be grounded to knowrob individual with recorded pose";
       as_.publishFeedback(feedback_);
       as_.setAborted();
     }
-    
-    //query recorded content from database 
-    if(getContentFromDatabase(objInst_, db_content_)) {
-      //CASE NOT TESTED
-      db_content_av_ = true; 
-      stringstream f;
-      f << "Found the following content in database: " << db_content_;
-      feedback_.feedback = f.str();
-      as_.publishFeedback(feedback_);
-    }
-    else {
-      feedback_.feedback = "No content record in database";
-      as_.publishFeedback(feedback_);
-    }
-    //look for content color in image
-    if(callGetDrinkColorAction(objPose_, color_)) {
-      color_av_ = true; 
-      stringstream f;
-      f << "Found the following color in image: " << color_;
-      feedback_.feedback = f.str();
-      as_.publishFeedback(feedback_);
-    }
+    else
+    {
+      //query recorded content from database 
+      if(getContentFromDatabase(objInst_, db_content_)) {
+        //CASE NOT TESTED
+        db_content_av_ = true; 
+        stringstream f;
+        f << "Found the following content in database: " << db_content_;
+        feedback_.feedback = f.str();
+        as_.publishFeedback(feedback_);
+      }
+      else {
+        feedback_.feedback = "No content record in database";
+        as_.publishFeedback(feedback_);
+      }
+      //look for content color in image
+      if(callGetDrinkColorAction(objPose_, color_)) {
+        color_av_ = true; 
+        stringstream f;
+        f << "Found the following color in image: " << color_;
+        feedback_.feedback = f.str();
+        as_.publishFeedback(feedback_);
+      }
 
-    //content recorded in database and color observed in image 
-    //NOT TESTED
-    if(db_content_av_ && color_av_) {
-      if(doContentAndColorMatch()) {
-        as_.setSucceeded(result_);
+      //content recorded in database and color observed in image 
+      //NOT TESTED
+      if(db_content_av_ && color_av_) {
+        if(doContentAndColorMatch()) {
+          as_.setSucceeded(result_);
+        }
+        else { //regard content information as expired and delete it from database
+          db_content_av_ = false;
+          stringstream q;
+          q << "rdf_retractall('" << objInst_ << "', knowrob:contains, _)";
+          PrologBindings qr = pl_.once(q.str());
+        }
       }
-      else { //regard content information as expired and delete it from database
-        db_content_av_ = false;
-        stringstream q;
-        q << "rdf_retractall('" << objInst_ << "', knowrob:contains, _)";
-        PrologBindings qr = pl_.once(q.str());
-      }
-    }
 
-    //only color information from image
-    if(color_av_ && !db_content_av_) {
-      if(0 == color_.compare("none")) {
-        result_.content = "empty";
-        as_.setSucceeded(result_);
+      //only color information from image
+      if(color_av_ && !db_content_av_) {
+        if(0 == color_.compare("none")) {
+          result_.content = "empty";
+          as_.setSucceeded(result_);
+        }
+        else if(identifyContent()) {
+          db_content_av_ = false;
+          color_av_ = false;
+          as_.setSucceeded(result_);
+        }
+        else {
+          db_content_av_ = false;
+          color_av_ = false;
+          as_.setAborted();
+        }
       }
-      else if(identifyContent()) {
-        db_content_av_ = false;
-        color_av_ = false;
+      //only record in database
+      else if(db_content_av_) {
+        feedback_.feedback = "Object is not visible, but content was recorded in the database previously";
+        as_.publishFeedback(feedback_);
+        result_.content = db_content_; 
         as_.setSucceeded(result_);
       }
       else {
-        db_content_av_ = false;
-        color_av_ = false;
-        as_.setAborted();
+        feedback_.feedback = "Object is neither visible nor is its content recorded in the database";
+        as_.publishFeedback(feedback_);
+        result_.content = "unknown";
+        as_.setSucceeded(result_);
       }
-    }
-    //only record in database
-    else if(db_content_av_) {
-      feedback_.feedback = "Object is not visible, but content was recorded in the database previously";
-      as_.publishFeedback(feedback_);
-      result_.content = db_content_; 
-      as_.setSucceeded(result_);
-    }
-    else {
-      feedback_.feedback = "Object is neither visible nor is its content recorded in the database";
-      as_.publishFeedback(feedback_);
-      result_.content = "unknown";
-      as_.setSucceeded(result_);
     }
   }
 
@@ -305,6 +307,7 @@ private:
       f << "No Action observed which leads to desired changes";
       feedback_.feedback = f.str();
       as_.publishFeedback(feedback_);
+      result_.content = "unknown";
       return true;
     }
 
