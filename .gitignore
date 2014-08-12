@@ -7,7 +7,7 @@ msg/QueryContent*.msg
 src/perception_ar_kinect
 owl_export
 
-data/*.jpg
+data/test
 
 *.swp
 *.xml

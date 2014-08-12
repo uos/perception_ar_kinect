@@ -115,10 +115,29 @@ public:
     //convert image to HSV
     cv::Mat hsv_image;
     cv::cvtColor(slice, hsv_image, CV_BGR2HSV);
+    
+    std::cout << "image size: " << hsv_image.rows*hsv_image.cols << std::endl;
  
-    //filter for red
+    //filter for color
+    if (isRed(hsv_image)) {
+      result_.color = "RedColor";
+      as_.setSucceeded(result_);
+    }
+    else if(isYellow(hsv_image)) {
+      result_.color = "YellowColor";
+      as_.setSucceeded(result_);
+    }
+    else {
+      result_.color = "none";
+      as_.setSucceeded(result_);
+    }
+  }
+
+private:
+  bool isRed(cv::Mat& image)
+  {
     cv::Mat mask;
-    cv::inRange(hsv_image, Scalar(0,170,60), Scalar(15,255,170), mask); 
+    cv::inRange(image, Scalar(0,60,10), Scalar(80,255,120), mask); 
     //count pixels
     int count = 0;
     for(int i = 0; i < mask.rows; i++) {
@@ -127,16 +146,33 @@ public:
           count++;
       }
     }
-    if (count > 170)
-    {
-      result_.color = "RedColor";
-      as_.setSucceeded(result_);
-    }
+    std::cout << "red pixels: " << count << std::endl;
+    if (count > 250) {
+      return true; }
     else {
-      result_.color = "none";
-      as_.setSucceeded(result_);
-    }
+      return false; }
   }
+
+  bool isYellow(cv::Mat& image)
+  {
+    cv::Mat mask;
+    cv::inRange(image, Scalar(19,40,180), Scalar(35,255,255), mask); 
+    //count pixels
+    int count = 0;
+    for(int i = 0; i < mask.rows; i++) {
+      for(int j = 0; j < mask.cols; j++) {
+        if (mask.at<int>(i,j) > 0)
+          count++;
+      }
+    }
+    std::cout << "yellow pixels: " << count << std::endl;
+    if (count > 210) {
+      return true; }
+    else {
+      return false; }
+  }
+
+
 };
 
 
