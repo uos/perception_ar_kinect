@@ -117,7 +117,6 @@ private:
         // has harizontal orientation, potential Source(objActOn)
         if (((-2.0 < source.pitch) && (source.pitch < -0.4)) || ((2.0 > source.pitch) && (source.pitch > 0.4)))
         {
-          std::cout << "pot source: " << source.type << " " << source.id << std::endl;
           geometry_msgs::Point s = source.pose.pose.position;
           //find Target(toLoc)
           for(int j = 0; j < count; j++)
@@ -129,7 +128,6 @@ private:
                (t.z < s.z) && (t.z + 0.2 > s.z) &&
                (((t.x-s.x)*(t.x-s.x)+(t.y-s.y)*(t.y-s.y))<0.1))
             {
-              std::cout << "found target: " << target.type << " " << target.id << std::endl;
               objActOn = source;
               toLoc = target;
               startTime = ros::Time::now();  
@@ -140,10 +138,7 @@ private:
         }
       }
       else {
-        std::cout << "observing Source: " << objActOn.type << " " << objActOn.id << std::endl;
-        std::cout << "observing target: " << toLoc.type << " " << toLoc.id << std::endl;
         if(source.id == static_cast<unsigned int>(objActOn.id)) {
-          std::cout << "source pitch: " << source.pitch << std::endl;
           // ids match but no longer horizontally oriented 
           if ((-2.0 > source.pitch) || (source.pitch > 2.0) || ((source.pitch > -0.4) && (source.pitch < 0.4)))
           {
