@@ -23,6 +23,7 @@ struct ObjWithPose{
   string type;
   int id;
   geometry_msgs::PoseStamped pose;
+  double pitch;
 };
 
 class ARFillingActionListener
@@ -41,12 +42,11 @@ public:
 private:
   ros::NodeHandle n_;
   tf::TransformListener tflistener_;
+  ObjWithPose visible[9];
   ObjWithPose toLoc;
   ObjWithPose objActOn;
   ros::Time startTime;
   bool hasStartTime;
-
-  //TODO: allow for more than a single potential toLoc
 
   void normalizePoseStamped(geometry_msgs::PoseStamped& pose)
   {
@@ -64,18 +64,19 @@ private:
   {
     Prolog pl;
     const std::vector<ar_pose::ARMarker>& objects = markers.markers;
-  
-    //observe wether filling action takes place
+    int count = 0;  
+
+    //find all markers of type FoodVessel and transform their poses to map frame 
     for(const ar_pose::ARMarker& obj : objects)
     {
       string type = knowrob_mapping::markerToObjClass(obj.id);
       stringstream s;
+      // object is of type FoodVessel?
       s << "owl_subclass_of('http://ias.cs.tum.edu/kb/knowrob.owl#" << type
         << "', 'http://ias.cs.tum.edu/kb/knowrob.owl#FoodVessel')";
       try {
         PrologQueryProxy res = pl.query(s.str());
         PrologQueryProxy::iterator it=res.begin();
-        // object is of type FoodVessel?
         if(it != res.end())
         {
           // transform pose to map frame
@@ -94,69 +95,86 @@ private:
             double yaw, pitch, roll;
             p.getBasis().setRotation(q);
             p.getBasis().getEulerYPR(yaw, pitch, roll);
-            //start time set?
-            if (!hasStartTime){
-              // has harizontal orientation, potential objActOn 
-              if ((-2.0 < pitch) && (pitch < -1.0)){
-                // toLoc set?
-                if (!toLoc.type.empty()) {
-                  // pose above toLoc?
-                  if ((toLoc.pose.pose.position.z < outPose.pose.position.z) &&
-                      (toLoc.pose.pose.position.z + 0.2 > outPose.pose.position.z)) {
-                    startTime = ros::Time::now();  
-                    hasStartTime = true;
-                    objActOn.type = type;
-                    objActOn.id = obj.id;
-                    objActOn.pose = outPose;
-                  }
-                }
-              }
-              else if ((-0.1 < pitch) && (pitch < 0.1)){
-                toLoc.id = obj.id;
-                toLoc.type = type;
-                toLoc.pose = outPose;
-              }
-            }
-            else {
-              if(obj.id == static_cast<unsigned int>(objActOn.id)) {
-                // ids match but no longer horizontally oriented 
-                if ((-2.0 > pitch) || (pitch > -1.0)){
-                  ros::Time endTime = ros::Time::now();
-                  ros::Duration d = endTime - startTime; 
-                  hasStartTime = false;
-                  // filling action took place if actOnObject was in vertical position for >3sec?
-                  if (d.toSec() > 5.0) {
-                    ROS_INFO("[ar_action_listener]Detected filling Process");
-                    string toLocInst;
-                    string objActOnInst;
-                    bool map_loc = knowrob_mapping::findObjInst(toLoc.type, toLoc.pose, toLocInst); 
-                    bool map_acton = knowrob_mapping::findObjInst(objActOn.type, objActOn.pose, objActOnInst);
-                    if (map_loc && map_acton)
-                    {
-                      stringstream a;
-                      a << "create_action_inst_perception('http://ias.cs.tum.edu/kb/knowrob.owl#FillingProcess',['"
-                        << objActOnInst << "'],['" << toLocInst << "'], []," << startTime << ","
-                        << endTime << ", ActionInst)";
-                      try {
-                        pl.query(a.str());
-                      } catch (json_prolog::PrologQueryProxy::QueryError ex) {
-                        ROS_ERROR("[ar_action_listener]%s", ex.what());
-                      }
-                    }
-                    else {
-                      ROS_INFO("[ar_action_listener]Objects involved in detected Action could not be grounded in database");
-                    }
-                  }
-                }
-              }
-            }
-          // has vertical orientation, potential object acted on
-        } catch (tf::TransformException ex) {
-            ROS_ERROR("[ar_action_listener]%s", ex.what());
+            visible[count].type = type;
+            visible[count].id = obj.id;
+            visible[count].pose = outPose; 
+            visible[count].pitch = pitch;
+            count++;
+          } catch (tf::TransformException ex) {
+              ROS_ERROR("[ar_action_listener]%s", ex.what());
+          }
         }
-      }
       } catch (json_prolog::PrologQueryProxy::QueryError ex) {
         ROS_ERROR("[ar_action_listener]%s", ex.what());
+      }
+    }
+
+    //between all visible FoodVessels check for FillingAction
+    for(int i = 0; i < count; i++)
+    {  
+      ObjWithPose source = visible[i];
+      if (!hasStartTime){
+        // has harizontal orientation, potential Source(objActOn)
+        if (((-2.0 < source.pitch) && (source.pitch < -0.4)) || ((2.0 > source.pitch) && (source.pitch > 0.4)))
+        {
+          std::cout << "pot source: " << source.type << " " << source.id << std::endl;
+          geometry_msgs::Point s = source.pose.pose.position;
+          //find Target(toLoc)
+          for(int j = 0; j < count; j++)
+          {
+            ObjWithPose target = visible[j];
+            geometry_msgs::Point t = target.pose.pose.position;
+            //has vertical orientation below Source(objActOn)
+            if((-0.1 < target.pitch) && (target.pitch < 0.1) &&
+               (t.z < s.z) && (t.z + 0.2 > s.z) &&
+               (((t.x-s.x)*(t.x-s.x)+(t.y-s.y)*(t.y-s.y))<0.1))
+            {
+              std::cout << "found target: " << target.type << " " << target.id << std::endl;
+              objActOn = source;
+              toLoc = target;
+              startTime = ros::Time::now();  
+              hasStartTime = true;
+              break;
+            }
+          }
+        }
+      }
+      else {
+        std::cout << "observing Source: " << objActOn.type << " " << objActOn.id << std::endl;
+        std::cout << "observing target: " << toLoc.type << " " << toLoc.id << std::endl;
+        if(source.id == static_cast<unsigned int>(objActOn.id)) {
+          std::cout << "source pitch: " << source.pitch << std::endl;
+          // ids match but no longer horizontally oriented 
+          if ((-2.0 > source.pitch) || (source.pitch > 2.0) || ((source.pitch > -0.4) && (source.pitch < 0.4)))
+          {
+            ros::Time endTime = ros::Time::now();
+            ros::Duration d = endTime - startTime; 
+            hasStartTime = false;
+            // filling action took place if actOnObject was in vertical position for >3sec?
+            if (d.toSec() > 5.0) {
+              ROS_INFO("[ar_action_listener]Detected filling Process");
+              string toLocInst;
+              string objActOnInst;
+              bool map_loc = knowrob_mapping::findObjInst(toLoc.type, toLoc.pose, toLocInst); 
+              bool map_acton = knowrob_mapping::findObjInst(objActOn.type, objActOn.pose, objActOnInst);
+              if (map_loc && map_acton)
+              {
+                stringstream a;
+                a << "create_action_inst_perception('http://ias.cs.tum.edu/kb/knowrob.owl#FillingProcess',['"
+                  << objActOnInst << "'],['" << toLocInst << "'], []," << startTime << ","
+                  << endTime << ", ActionInst)";
+                try {
+                  pl.query(a.str());
+                } catch (json_prolog::PrologQueryProxy::QueryError ex) {
+                  ROS_ERROR("[ar_action_listener]%s", ex.what());
+                }
+              }
+              else {
+                ROS_INFO("[ar_action_listener]Objects involved in detected Action could not be grounded in database");
+              }
+            }
+          }
+        }
       }
     }
   } 
