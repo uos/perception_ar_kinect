@@ -116,8 +116,6 @@ public:
     cv::Mat hsv_image;
     cv::cvtColor(slice, hsv_image, CV_BGR2HSV);
     
-    std::cout << "image size: " << hsv_image.rows*hsv_image.cols << std::endl;
- 
     //filter for color
     if (isRed(hsv_image)) {
       result_.color = "RedColor";
@@ -146,7 +144,6 @@ private:
           count++;
       }
     }
-    std::cout << "red pixels: " << count << std::endl;
     if (count > 250) {
       return true; }
     else {
@@ -165,7 +162,6 @@ private:
           count++;
       }
     }
-    std::cout << "yellow pixels: " << count << std::endl;
     if (count > 210) {
       return true; }
     else {
