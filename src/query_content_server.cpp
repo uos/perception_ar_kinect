@@ -299,7 +299,6 @@ private:
       feedback_.feedback = f.str();
       as_.publishFeedback(feedback_);
       return true;
-      //TODO: in case of more than one solution compare timestamps
     }
     if(qp.begin() == qp.end())
     {
@@ -308,10 +307,8 @@ private:
       feedback_.feedback = f.str();
       as_.publishFeedback(feedback_);
       result_.content = "unknown";
-      return true;
     }
-
-    //Optional TODO: find content based on the availability of sources 
+    return true;
   }
 
   
