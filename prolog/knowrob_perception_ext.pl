@@ -89,25 +89,18 @@ create_object_perception_with_instance_check(ObjClass, ObjPose, PerceptionTypes,
 % @param ObjPose   Pose where the object should be located
 % @param ObjInst   found object instance
 
-same_object(ObjClass, ObjPose, ObjInst) :-
+same_object(ObjClass, [M00, M01, M02, M03, M10, M11, M12, M13, M20, M21, M22, M23, M30, M31, M32, M33], ObjInst) :-
   get_timepoint(CurrentTime),
   owl_individual_of(ObjInst, ObjClass),
-  % find all detections of the Object that are valid at CurrentTime
+  % find latest detection of the Object that is valid at CurrentTime
   object_detection(ObjInst, CurrentTime, Detection),
   rdf_triple(knowrob:eventOccursAt, Detection, DMatrix),
   rdf_triple(knowrob:m03, DMatrix, DCxx),strip_literal_type(DCxx, DCx),atom_to_term(DCx,DX,_),
   rdf_triple(knowrob:m13, DMatrix, DCyy),strip_literal_type(DCyy, DCy),atom_to_term(DCy,DY,_),
   rdf_triple(knowrob:m23, DMatrix, DCzz),strip_literal_type(DCzz, DCz),atom_to_term(DCz,DZ,_),
-  % without cut deadlock-error for ObjClass = knowrob:TetraPak,
-  % however works for e.g. DrinkingGlass, Orange_Juice without cut
-  !,
-  create_pose(ObjPose, Loc),
-  rdf_triple(knowrob:m03, Loc, LCxx),strip_literal_type(LCxx, LCx),atom_to_term(LCx,LX,_),
-  rdf_triple(knowrob:m13, Loc, LCyy),strip_literal_type(LCyy, LCy),atom_to_term(LCy,LY,_),
-  rdf_triple(knowrob:m23, Loc, LCzz),strip_literal_type(LCzz, LCz),atom_to_term(LCz,LZ,_),
-
   % check if distance is below 5cm
-  =<( (((DX-LX)*(DX-LX))+((DY-LY)*(DY-LY))+((DZ-LZ)*(DZ-LZ))), 0.25).
+  % TODO: adapt distance threshold to time passed between two views
+  =<( (((DX-M03)*(DX-M03))+((DY-M13)*(DY-M13))+((DZ-M23)*(DZ-M23))), 0.25).
 
 
 
