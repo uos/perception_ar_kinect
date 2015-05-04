@@ -52,3 +52,19 @@ rosbuild_add_executable(get_drink_color_server src/get_drink_color_server.cpp)
 rosbuild_link_boost(get_drink_color_server thread)
 
 rosbuild_add_executable(color_trackbar src/color_trackbar.cpp)
+
+rosbuild_include(rosprolog utils)
+
+rosbuild_find_ros_package(ias_knowledge_base)
+set( OWL_PATH_PREFIX ${ias_knowledge_base_PACKAGE_PATH} )
+fix_ros_destination_path(OWL_PATH_PREFIX)
+
+rosbuild_find_ros_package(infer_hidden_params)
+set( LOCAL_PACKAGE_PATH ${infer_hidden_params_PACKAGE_PATH} )
+fix_ros_destination_path(LOCAL_PACKAGE_PATH)
+
+file(GLOB inputs owl/*.in)
+foreach( _in ${inputs} )
+string(REPLACE ".in" "" _out ${_in})
+configure_file( ${_in} ${_out} )
+endforeach( _in )
